@@ -1,7 +1,8 @@
-// Database test for setup.sql, run against an in-process Postgres (PGlite).
+// Database test for supabase/migrations + admin-settings.sql, run against an in-process Postgres (PGlite).
 //   npm install && npm run test:db
-// Stubs the Supabase pieces setup.sql touches (roles, storage schema, extensions schema),
-// runs setup.sql twice (it must stay idempotent), then exercises the RPCs as the anon role.
+// Stubs the Supabase pieces the SQL touches (roles, storage schema, extensions schema),
+// runs every migration in order twice (each must stay idempotent), checks that sign-up and admin
+// stay locked until admin-settings.sql runs, then exercises the RPCs as the anon role.
 import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import fs from 'node:fs';
@@ -22,13 +23,23 @@ create table storage.objects(id serial, bucket_id text, name text); alter table 
 grant usage on schema public to anon, authenticated;
 alter default privileges in schema public grant all on tables to anon, authenticated;
 alter default privileges in schema public grant execute on functions to anon, authenticated;`);
-const sql = fs.readFileSync(path.join(root, 'setup.sql'), 'utf8');
-await db.exec(sql);
-await db.exec(sql);
-console.log('setup.sql ran twice');
+const migDir = path.join(root, 'supabase', 'migrations');
+const migrations = fs.readdirSync(migDir).filter((f) => /^\d{14}_.+\.sql$/.test(f)).sort();
+check(migrations.length === fs.readdirSync(migDir).length, 'every migration file is named <14-digit timestamp>_name.sql');
+for (let i = 0; i < 2; i++) for (const f of migrations) await db.exec(fs.readFileSync(path.join(migDir, f), 'utf8'));
+console.log(`${migrations.length} migration(s) ran twice`);
 
-await db.exec('set role anon');
 const CODE = '여기에-참여코드', ADMIN = '여기에-관리자-키를-적으세요';
+console.log('locked until admin-settings.sql');
+await db.exec('set role anon');
+check((await one('select needs_join_code()')) === true, 'sign-up needs a join code before admin settings');
+check((await one(`select sign_up('early','E','secret1',$1)`, [CODE])).error === 'join_code', 'placeholder join code rejected before admin settings');
+check((await one('select is_admin($1)', [ADMIN])) === false, 'admin key unknown before admin settings');
+await db.exec('reset role');
+await db.exec(fs.readFileSync(path.join(root, 'admin-settings.sql'), 'utf8'));
+for (const f of migrations) await db.exec(fs.readFileSync(path.join(migDir, f), 'utf8'));
+await db.exec('set role anon');
+check((await one('select is_admin($1)', [ADMIN])) === true, 'admin settings survive re-running migrations');
 const titles = async (t) => (await one('select list_sets($1)', [t ?? null])).map((s) => s.title).sort().join(',');
 
 console.log('accounts');

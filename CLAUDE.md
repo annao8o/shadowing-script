@@ -5,18 +5,29 @@ auto-splits the audio into one clip per line, and people tap lines to listen, re
 UI copy is Korean; the practised language is per set (Indonesian first, others supported).
 
 Hosted as a static page (GitHub Pages). Data lives in Supabase (Postgres + Storage).
-There is no build step and no backend code besides `setup.sql`.
+There is no build step and no backend code besides the SQL in `supabase/migrations/`.
+The repo is connected to Supabase's GitHub integration ("Deploy to production" on `main`): every push to
+`main` applies any migration file Supabase hasn't run yet. GitHub Pages serves `index.html` from `main`.
+**The repo is public** — never commit the admin key, join code, DB password or any secret key.
 
 ## Files
 
 - `index.html` — the whole app: markup, CSS and one script. Edit it directly.
-- `setup.sql` — Supabase schema, RPC functions, grants, storage bucket. Run in Supabase SQL Editor.
-  Must stay **idempotent and upgrade-safe** (re-running it on an existing project keeps data).
+- `supabase/migrations/<YYYYMMDDHHMMSS>_name.sql` — Supabase schema, RPC functions, grants, storage bucket.
+  `..._init.sql` is the former `setup.sql`. Supabase runs each file **once**, in name order, so:
+  - **Never edit a migration that is already on `main`.** Put every DB change in a new file with a later
+    timestamp (e.g. `create or replace function ...` for a changed RPC, `alter table ... add column if not exists`).
+  - Keep every migration **idempotent and upgrade-safe** too (projects set up by hand may re-run them).
+  - No `create index concurrently` or anything else that can't run inside one transaction.
+  - No `supabase/config.toml`: without it the integration only applies migrations and leaves project settings alone.
+- `admin-settings.sql` — sets the admin key hash and join code; the owner runs it by hand in SQL Editor and
+  never commits real values. Until it runs, the init migration's random placeholder locks sign-up and admin.
 - `README.md` — setup guide for the (non-developer) site owner, in Korean.
 - `tests/e2e_test.py` — Playwright UI test against `tests/mock-supabase.js` (no network needed).
-- `tests/db_test.mjs` — runs `setup.sql` in PGlite (in-process Postgres) and checks permissions.
+- `tests/db_test.mjs` — runs all migrations (twice) and `admin-settings.sql` in PGlite (in-process Postgres)
+  and checks permissions.
 - `tests/mock-supabase.js` — in-browser fake of the supabase-js client and every RPC. Keep it in step
-  with `setup.sql` when RPCs change.
+  with the migrations when RPCs change.
 
 ## Tests
 
@@ -42,13 +53,14 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
    library, practice view, speakers, playback (audio element or speechSynthesis), waveform canvas,
    trash, backup/import, sharing (`Picker`, share panel, inbox), account (login/sign-up, my info), start.
 
-## Data model and security (setup.sql)
+## Data model and security (supabase/migrations)
 
 - Tables: `settings` (admin key hash, join code), `accounts` (bcrypt via pgcrypto), `sessions`
   (sha256 of random token), `sets`, `shares` (partial-visibility invites: pending/accepted/declined).
 - **All tables have RLS on and no grants to anon/authenticated.** Every read and write goes through
   `security definer` RPC functions; each public RPC gets an explicit `grant execute ... to anon, authenticated`
-  in section 7. A new RPC must be added to that list, or the site cannot call it (the project has
+  (section 7 of the init migration). A new RPC needs its own `revoke all ... from public` +
+  `grant execute ... to anon, authenticated` in the migration that adds it, or the site cannot call it (the project has
   "auto-expose new tables/functions" off).
 - Custom auth (not Supabase Auth): `sign_up`, `sign_in`, `sign_out`, `me`, `set_name`, `change_password`,
   `admin_reset_password`. The client keeps the session token in localStorage (`naskah.session`).

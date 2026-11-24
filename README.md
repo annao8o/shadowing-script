@@ -4,9 +4,10 @@
 **전체 공개 세트는 로그인 없이 누구나** 보고 연습할 수 있어요. 대본을 추가하거나 내 세트를 고치거나 공유 알림을 받을 때만 이 사이트 전용 **아이디·비밀번호**로 로그인합니다 (Claude 계정은 필요 없어요).
 필요한 것: **Supabase 계정**(데이터 저장, 무료), **GitHub 계정**(사이트 호스팅, 무료). 처음 한 번 20분 정도 걸립니다.
 
-파일 3개
+주요 파일
 - `index.html` — 사이트 자체
-- `setup.sql` — 데이터베이스 설정 (한 번만 실행)
+- `supabase/migrations/` — 데이터베이스 설정. GitHub 연동을 켜 두면 Supabase가 자동으로 실행해요
+- `admin-settings.sql` — 관리자 키와 참여 코드 정하기 (SQL Editor에서 직접 한 번 실행)
 - `README.md` — 이 안내
 
 ---
@@ -17,19 +18,35 @@
 2. 이름은 자유(예: `shadowing`), Region은 **Northeast Asia (Seoul)**, 데이터베이스 비밀번호는 아무거나 길게 정해 둡니다.
 3. 프로젝트가 만들어질 때까지 1~2분 기다립니다.
 
-## 2. 데이터베이스 설정 (setup.sql)
+## 2. 데이터베이스 설정 (GitHub 연동)
 
-1. `setup.sql`을 메모장 등으로 엽니다.
-2. **맨 아래 두 곳을 바꿉니다.**
+GitHub 저장소를 Supabase에 연결해 두면, `supabase/migrations/` 폴더에 새 파일이 `main`에 올라올 때마다 Supabase가 알아서 실행해요. 무료 플랜에서도 돼요.
+
+1. Supabase 왼쪽 아래 **Project Settings → Integrations** → **GitHub Integration**에서 **Authorize GitHub**를 누르고, GitHub 화면에서 **Authorize Supabase**를 누릅니다.
+2. 저장소 목록에서 이 사이트의 저장소(예: `shadowing-script`)를 고릅니다.
+3. **Working directory**는 `.` 그대로 둡니다.
+4. **Deploy to production**을 켜고, production branch는 `main`으로 둡니다.
+   (**Automatic branching**은 Pro 플랜 기능이라 꺼 둬도 돼요.)
+5. **Enable integration**을 누릅니다.
+6. 연결한 뒤 `main`에 새 커밋이 올라오면 설정이 실행돼요. 몇 분 뒤 **Table Editor**에 `sets`, `accounts` 같은 표가 보이면 성공입니다.
+
+> 이전 버전의 `setup.sql`을 이미 실행한 프로젝트에 연결해도 괜찮아요. 첫 설정 파일은 여러 번 실행해도 안전해서, 올린 데이터와 관리자 키·참여 코드가 그대로 유지돼요.
+>
+> GitHub 연동 없이 쓰고 싶으면: `supabase/migrations/` 안의 파일을 **이름 순서대로** 하나씩 열어 SQL Editor에 붙여 넣고 **Run** 하면 돼요.
+
+### 관리자 키와 참여 코드 (한 번만)
+
+저장소는 누구나 볼 수 있어서, 관리자 키는 GitHub에 올리지 않고 Supabase에서 직접 정해요.
+이걸 하기 전까지는 **회원가입과 관리자 모드가 잠겨 있어요.**
+
+1. `admin-settings.sql` 내용을 복사해 Supabase **SQL Editor** 새 쿼리에 붙여 넣습니다. (파일 자체는 고치지 마세요.)
+2. SQL Editor 안에서 두 곳을 바꿉니다.
    - `'여기에-관리자-키를-적으세요'` → 본인만 아는 긴 비밀번호 (모든 세트를 고치고 지우고, 비밀번호를 잊은 사람의 비밀번호를 새로 정해 줄 수 있는 키)
    - `'여기에-참여코드'` → **회원가입할 때** 필요한 코드. 함께 쓸 사람들에게만 알려 주세요 (예: `'latihan2026'`)
      아무나 가입해도 된다면 따옴표까지 지우고 `null`로 바꿉니다.
-3. Supabase 왼쪽 메뉴 **SQL Editor** → 새 쿼리에 파일 전체를 붙여 넣고 **Run**.
-   `Success. No rows returned`가 나오면 성공입니다.
+3. **Run**. `Success. No rows returned`가 나오면 성공입니다.
 
-> 이전 버전의 setup.sql을 이미 실행했다면 이 파일을 그대로 한 번 더 실행하면 됩니다. 기존 세트는 ‘전체 공개 · 인도네시아어’로 유지됩니다. 올린 데이터는 유지되고, 이전 버전에서 세트를 올렸던 기기로 가입·로그인하면 그 세트가 자동으로 내 계정으로 옮겨집니다.
->
-> 관리자 키나 참여 코드를 나중에 바꾸고 싶으면 맨 아래 `insert into public.settings ...` 부분만 고쳐서 다시 Run 하면 됩니다. 데이터는 지워지지 않습니다.
+> 관리자 키나 참여 코드를 나중에 바꾸고 싶으면 이 과정을 다시 하면 됩니다. 데이터는 지워지지 않습니다.
 
 ## 3. 사이트에 Supabase 연결
 
@@ -49,14 +66,11 @@ window.NASKAH_CONFIG = {
 
 ## 4. GitHub Pages로 사이트 공개
 
-1. https://github.com 에서 가입 후 오른쪽 위 **+** → **New repository**.
-   이름 예: `shadowing`, **Public** 선택 → **Create repository**.
-2. **uploading an existing file** 링크(또는 **Add file → Upload files**)를 눌러 `index.html`을 올리고 **Commit changes**.
-3. 저장소의 **Settings → Pages** → Branch를 `main`, 폴더 `/ (root)`로 두고 **Save**.
-4. 1~2분 뒤 같은 화면 위쪽에 주소가 나옵니다: `https://내아이디.github.io/shadowing/`
+1. GitHub 저장소의 **Settings → Pages** → Branch를 `main`, 폴더 `/ (root)`로 두고 **Save**.
+2. 1~2분 뒤 같은 화면 위쪽에 주소가 나옵니다: `https://내아이디.github.io/저장소이름/`
    이 주소를 연습할 사람들에게 보내면 됩니다.
 
-> `index.html`을 고친 뒤에는 2번처럼 다시 올리면(같은 이름으로 덮어쓰기) 1~2분 뒤 반영됩니다.
+> 이후 `main`에 올라온 변경은 자동으로 반영돼요. 사이트(`index.html`)는 1~2분 뒤, 데이터베이스(`supabase/migrations/`)는 Supabase가 실행한 뒤 반영됩니다.
 
 ## 5. 처음 열었을 때
 

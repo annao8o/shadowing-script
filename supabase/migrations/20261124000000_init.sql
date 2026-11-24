@@ -1,9 +1,10 @@
 -- ============================================================
--- Shadowing Script (쉐도잉 스크립트) — Supabase 설정
--- Supabase 대시보드 > SQL Editor 에 전체를 붙여 넣고 Run 하세요.
--- 맨 아래 "관리자 키"와 "참여 코드" 두 곳만 먼저 바꿔 주세요.
--- 여러 번 실행해도 안전하고, 이전 버전에서 올린 데이터도 그대로 유지돼요.
+-- Shadowing Script (쉐도잉 스크립트) — 데이터베이스 첫 설정
+-- GitHub 연동을 켜 두면 Supabase가 main에 올라온 이 파일을 자동으로 한 번 실행해요.
+-- 연동 없이 쓸 때는 SQL Editor에 전체를 붙여 넣고 Run 하세요. 여러 번 실행해도 안전해요.
+-- 관리자 키와 참여 코드는 여기 적지 않아요(저장소가 공개라서). 루트의 admin-settings.sql 을 보세요.
 -- ============================================================
+
 
 create extension if not exists pgcrypto with schema extensions;
 
@@ -421,11 +422,11 @@ on conflict (id) do update set public = true, file_size_limit = excluded.file_si
 drop policy if exists "naskah upload audio" on storage.objects;
 create policy "naskah upload audio" on storage.objects for insert to anon, authenticated with check (bucket_id = 'audio');
 
-notify pgrst, 'reload schema';
-
--- 9) ★ 여기 두 곳을 바꾸세요 ★
---    관리자 키: 모든 세트를 고치고 지우고, 비밀번호를 잊은 사람의 비밀번호를 새로 정해 줄 수 있는 키. 본인만 알고 있어야 해요.
---    참여 코드: 회원가입할 때 필요한 코드. 아무나 가입해도 되면 null 로 두세요.
+-- 9) 관리자 키·참여 코드 자리 — admin-settings.sql 을 실행하기 전까지는
+--    아무도 모르는 임의 값이 들어가서 관리자 모드와 회원가입이 잠겨 있어요.
+--    이미 설정해 둔 값이 있으면 건드리지 않아요.
 insert into public.settings (id, admin_hash, join_code)
-values (1, public.naskah_hash('여기에-관리자-키를-적으세요'), '여기에-참여코드')
-on conflict (id) do update set admin_hash = excluded.admin_hash, join_code = excluded.join_code;
+values (1, public.naskah_hash(gen_random_uuid()::text), gen_random_uuid()::text)
+on conflict (id) do nothing;
+
+notify pgrst, 'reload schema';
