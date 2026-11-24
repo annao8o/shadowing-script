@@ -78,5 +78,50 @@ check(String(await q(`select update_set($1,$2,'{"script":""}'::jsonb)`, [ed, ja.
 check(String(await q(`select update_set($1,$2,'{"title":"x"}'::jsonb)`, [ed, bu.token])).startsWith('ERR'), 'other user cannot change settings');
 check(!JSON.stringify(await one('select list_sets(null)')).includes('owner_hash'), 'owner_hash never returned');
 
+console.log('folders');
+const ids = async (t) => (await one('select list_sets($1)', [t ?? null])).map((r) => r.title);
+const fnames = async (t) => (await one('select list_folders($1)', [t ?? null])).map((f) => f.title).sort().join(',');
+const fo = (await one('select save_folder($1,null,$2,$3)', [ja.token, '여행 회화', 'private'])).id;
+check(!!fo, 'owner can create a folder');
+check((await one('select save_folder($1,null,$2,$3)', [null, 'x', 'public'])).error === 'auth', 'guest cannot create a folder');
+check((await one('select save_folder($1,null,$2,$3)', [ja.token, '  ', 'public'])).error === 'bad_title', 'empty folder name rejected');
+const inF = await mk('in folder', 'public');
+await one('select update_set($1,$2,$3::jsonb)', [inF, ja.token, JSON.stringify({ folder_id: fo })]);
+check(!(await ids(null)).includes('in folder'), 'public set inside a private folder is hidden from guests');
+check(!(await ids(bu.token)).includes('in folder'), 'and hidden from other users');
+check((await ids(ja.token)).includes('in folder'), 'owner still sees it');
+check(await fnames(null) === '' && await fnames(bu.token) === '' && await fnames(ja.token) === '여행 회화', 'private folder listed only for owner');
+const buSet = await one('select create_set($1::jsonb,$2)', [JSON.stringify({ title: 'budi set', script: 'x' }), bu.token]);
+check(String(await q('select update_set($1,$2,$3::jsonb)', [buSet, bu.token, JSON.stringify({ folder_id: fo })])).includes('bad_folder'), "cannot put a set into someone else's folder");
+check((await one('select save_folder($1,$2,$3,$4)', [bu.token, fo, 'hack', 'public'])).error === 'forbidden', "cannot edit someone else's folder");
+
+await one('select save_folder($1,$2,$3,$4)', [ja.token, fo, '여행 회화', 'public']);
+check((await ids(null)).includes('in folder') && await fnames(null) === '여행 회화', 'public folder shows its sets to guests');
+const privInPub = await mk('private set in public folder', 'private');
+await one('select update_set($1,$2,$3::jsonb)', [privInPub, ja.token, JSON.stringify({ folder_id: fo })]);
+check((await ids(null)).includes('private set in public folder'), "a set in a folder follows the folder's visibility");
+
+await one('select save_folder($1,$2,$3,$4,$5::uuid[])', [ja.token, fo, '여행 회화', 'partial', [bu.id]]);
+check(!(await ids(bu.token)).includes('in folder'), 'partial folder hidden before accepting');
+const inbox = await one('select list_inbox($1)', [bu.token]);
+check(inbox.some((x) => x.kind === 'folder' && x.folder_id === fo && x.count === 2), 'recipient gets a folder invite with the set count');
+check((await one('select get_folder_shares($1,$2)', [ja.token, fo]))[0].status === 'pending', 'owner sees pending folder share');
+await one('select respond_folder_share($1,$2,true)', [bu.token, fo]);
+const later = await mk('added later', 'private');
+await one('select update_set($1,$2,$3::jsonb)', [later, ja.token, JSON.stringify({ folder_id: fo })]);
+const bv = await one('select list_sets($1)', [bu.token]);
+check(['in folder', 'added later'].every((t) => bv.some((r) => r.title === t && r.shared_with_me)), 'accepted folder shows all its sets, including ones added later');
+check((await one('select list_folders($1)', [bu.token])).some((f) => f.id === fo && f.shared_with_me), 'accepted folder listed as shared with me');
+check(String(await q('select update_set($1,$2,$3::jsonb)', [later, bu.token, '{"title":"x"}'])).startsWith('ERR'), 'recipient cannot edit sets in a shared folder');
+
+await one('select update_set($1,$2,$3::jsonb)', [later, ja.token, JSON.stringify({ folder_id: null })]);
+check(!(await ids(bu.token)).includes('added later'), "moving a set out of the folder brings back the set's own visibility");
+
+check((await one('select delete_folder($1,$2)', [bu.token, fo])).error === 'forbidden', "cannot delete someone else's folder");
+await one('select delete_folder($1,$2)', [ja.token, fo]);
+check(await fnames(ja.token) === '', 'folder deleted');
+check((await ids(bu.token)).includes('in folder') && (await ids(ja.token)).includes('private set in public folder'), 'deleting a folder keeps its sets and who can see them');
+check((await one('select list_sets($1)', [ja.token])).every((r) => r.folder_id === null), 'sets moved out of the deleted folder');
+
 console.log(failures.length ? `\nFAILED: ${failures.join(', ')}` : '\nall checks passed');
 process.exit(failures.length ? 1 : 0);

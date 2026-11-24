@@ -57,6 +57,11 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
 
 - Tables: `settings` (admin key hash, join code), `accounts` (bcrypt via pgcrypto), `sessions`
   (sha256 of random token), `sets`, `shares` (partial-visibility invites: pending/accepted/declined).
+- Folders (`folders`, `folder_shares`; `sets.folder_id`): one level, owned by one account. **A set inside a
+  folder follows the folder's visibility, not its own** (`naskah_folder_visible`); a set's own `visibility`/`shares`
+  only apply when `folder_id` is null. Only the set owner's folders can hold a set (`update_set` checks).
+  Deleting a folder moves its sets out and copies the folder's visibility and shares onto them.
+  Folders exist only in server mode; the browser-only local mode has none.
 - **All tables have RLS on and no grants to anon/authenticated.** Every read and write goes through
   `security definer` RPC functions; each public RPC gets an explicit `grant execute ... to anon, authenticated`
   (section 7 of the init migration). A new RPC needs its own `revoke all ... from public` +
