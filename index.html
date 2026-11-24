@@ -213,7 +213,7 @@ body.pred .pre{display:block}
   </section>
 
   <section class="setup hidden" id="setup">
-    <h2>새 대본 추가</h2>
+    <h2 id="setupH">새 대본 추가</h2>
     <label class="f" for="title">제목</label>
     <input id="title" class="inp" placeholder="예: 학회 발표 인사말" maxlength="80">
     <label class="f" for="lang">연습할 언어</label>
@@ -226,6 +226,8 @@ body.pred .pre{display:block}
     <label class="f">2. 음성 파일 (대본 전체 녹음) — 없으면 건너뛰세요</label>
     <div class="file"><label class="btn" for="audIn">음성 파일 선택</label><input type="file" id="audIn" accept="audio/*,video/*,.m4a,.mp3,.wav,.aac,.ogg,.webm"><span class="fname" id="fname">선택된 파일 없음</span></div>
     <p class="hint">m4a·mp3 권장 (최대 약 15MB).</p>
+    <p class="hint hidden" id="audNow"></p>
+    <label class="chk hidden" id="toTtsL"><input type="checkbox" id="toTts"> 녹음 대신 기계 음성으로 바꾸기</label>
     <div class="row">
       <select id="mode" aria-label="나누기 기준"><option value="auto">자동 판단</option><option value="line">줄 단위로 나누기</option><option value="sentence">문장 단위로 나누기</option></select>
     </div>
@@ -258,13 +260,7 @@ body.pred .pre{display:block}
     <p class="hint hidden" id="spkHint">멘트마다 아래 화자 버튼을 눌러 지정하세요. ‘+ 새 화자’로 이름을 추가할 수 있어요.</p>
     <div class="spkbar hidden" id="spkBar" role="group" aria-label="화자별 보기"></div>
     <ol class="lines" id="list"></ol>
-    <div class="del hidden" id="shareBox"><button class="btn" id="shareBtn">공유 설정</button><span id="shareInfo"></span></div>
-    <section class="setup hidden" id="sharePanel" style="margin-top:8px">
-      <h2>공유 설정</h2>
-      <div id="sVis"></div>
-      <div class="row"><button class="btn main" id="shareSave">저장</button><button class="btn" id="shareCancel">닫기</button></div>
-      <div id="shareMsg" class="bkmsg" role="status"></div>
-    </section>
+    <div class="del hidden" id="setBox"><button class="btn" id="setBtn">세트 설정</button><span id="shareInfo"></span></div>
     <div class="del hidden" id="leaveBox"><button class="btn" id="leaveBtn">내 목록에서 빼기</button><span>공유받은 세트예요</span></div>
     <div class="del hidden" id="delBox"><button class="btn" id="delBtn">휴지통으로 이동</button></div>
   </section>
@@ -602,7 +598,7 @@ async function openSet(set){
   S.pr=(set.pr&&set.pr.length===S.items.length)?set.pr.map(x=>String(x||'')):S.items.map(()=>'');
   pref.set('last',set.id);
   show('#lib',false);show('#setup',false);show('#practice',true);show('#bar',true);show('#delBox',canModify(set));show('#delBtn',true);
-  const own=B.remote&&set.uid===B.me;show('#shareBox',own);show('#sharePanel',false);show('#leaveBox',B.remote&&set.sharedWithMe&&!own);$('#shareInfo').textContent=own?shareInfo(set):'';
+  const own=B.remote&&set.uid===B.me;show('#setBox',canModify(set));show('#leaveBox',B.remote&&set.sharedWithMe&&!own);$('#shareInfo').textContent=own?shareInfo(set):'';
   setupView();scrollTo(0,0);
   if(S.tts){setAudio(null);return}
   $('#wEmpty').textContent='음성을 불러오는 중…';show('#wEmpty',true);cv.classList.add('hidden');
@@ -651,10 +647,28 @@ $('#spkBar').addEventListener('click',e=>{const b=e.target.closest('.sc');if(!b)
   if(S.playing&&!visible(S.cur))stop();render();mark();draw()});
 
 /* ---------- add form ---------- */
-let pickBlob=null;
-function openForm(){stop();$('#lang').value=pref.get('lastLang','id');if(!$('#lang').value)$('#lang').value='id';show('#fVisWrap',B.remote);if(B.remote)fPick.set(pref.get('lastVis','public'),[]);show('#lib',false);show('#practice',false);show('#bar',false);show('#setup',true);msg('');
+let pickBlob=null,EDIT=null,wasEdit=false;
+function clearForm(){$('#title').value='';$('#script').value='';$('#mode').value='auto';pickBlob=null;$('#fname').textContent='선택된 파일 없음';$('#audIn').value='';$('#toTts').checked=false}
+function formMode(edit){
+  $('#setupH').textContent=edit?'세트 설정':'새 대본 추가';
+  $('#go').textContent=edit?'저장':'멘트별로 자동 분할 후 저장';show('#ttsGo',!edit);
+  show('#audNow',edit);show('#toTtsL',edit&&!EDIT.tts);
+  if(edit)$('#audNow').textContent=EDIT.tts?'지금은 기계 음성 세트예요. 녹음 파일을 고르면 녹음으로 바뀌어요.':'지금 녹음: '+(EDIT.name||'음성 파일')+' ('+fmt(EDIT.dur)+'). 새 파일을 고르면 바뀌고, 멘트 구간은 새로 나눠요.';
+}
+function openForm(){stop();if(wasEdit){clearForm();wasEdit=false}EDIT=null;formMode(false);
+  $('#lang').value=pref.get('lastLang','id');if(!$('#lang').value)$('#lang').value='id';show('#fVisWrap',B.remote);if(B.remote)fPick.set(pref.get('lastVis','public'),[]);show('#lib',false);show('#practice',false);show('#bar',false);show('#setup',true);msg('');
   $('#title').focus()}
-function formItems(){const items=parseScript($('#script').value,$('#mode').value);if(!items.length){msg('대본을 먼저 넣어 주세요.');return null}return items}
+async function openEdit(set){
+  if(!canModify(set))return;stop();EDIT=set;wasEdit=true;clearForm();formMode(true);
+  $('#title').value=set.title||'';$('#script').value=set.script||'';$('#mode').value=set.mode||'auto';$('#lang').value=set.lang||'id';
+  const own=B.remote&&set.uid===B.me;show('#fVisWrap',own);
+  show('#lib',false);show('#practice',false);show('#bar',false);show('#setup',true);msg('');scrollTo(0,0);
+  if(own){fPick.set(set.visibility,[]);if(set.visibility==='partial'){msg('공유 대상을 불러오는 중…');
+    let us=[];try{const {data}=await sb.rpc('get_shares',{p_token:B.session,p_id:set.id});us=data||[]}catch(e){}
+    if(EDIT===set){fPick.set(set.visibility,us);msg('')}}}
+}
+const ordOf=set=>set&&set.fmt!==2?'kp':'pk';
+function formItems(){const items=parseScript($('#script').value,$('#mode').value,ordOf(EDIT));if(!items.length){msg('대본을 먼저 넣어 주세요.');return null}return items}
 function title(){return $('#title').value.trim()||(parseScript($('#script').value,'line')[0]||{t:'새 대본'}).t.slice(0,40)}
 async function saveForm(tts){
   const items=formItems();if(!items)return;
@@ -679,6 +693,54 @@ async function saveForm(tts){
     msg(c==='decode'?'이 음성 파일을 읽지 못했어요. mp3나 m4a로 다시 시도해 주세요.':c==='too_large'?'음성 파일이 너무 커요. 약 15MB 이하의 mp3·m4a로 줄여 주세요.':c==='doc_full'?'내 세트 저장 공간이 가득 찼어요. 쓰지 않는 내 세트를 삭제해 주세요.':c==='quota_or_state'||c==='quota_exceeded'?'저장 공간이 가득 찼어요. 쓰지 않는 세트를 삭제해 주세요.':c==='unsupported_type'?'이 형식의 음성 파일은 올릴 수 없어요. mp3나 m4a로 바꿔 주세요.':c==='auth'?'로그인이 만료됐어요. 다시 로그인한 뒤 올려 주세요.':c==='too_big'?'대본이 너무 길어요. 나눠서 올려 주세요.':c==='upload'?'음성 파일을 올리지 못했어요. 연결을 확인하고 다시 시도해 주세요.':'저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.');
   }
   $('#go').disabled=$('#ttsGo').disabled=false;
+}
+
+async function saveEdit(){
+  const set=EDIT;if(!set)return;const items=formItems();if(!items)return;
+  const toTts=!pickBlob&&(set.tts||$('#toTts').checked);
+  if(toTts&&!SY){msg('이 브라우저는 기계 음성을 지원하지 않아요. 녹음 파일을 골라 주세요.');return}
+  const own=B.remote&&set.uid===B.me,v=own?fPick.get():null;
+  if(v&&v.vis==='partial'&&!v.users.length){msg('일부 공개는 공유할 사람을 한 명 이상 추가해 주세요.');return}
+  const script=$('#script').value,mode=$('#mode').value,changed=script!==set.script||mode!==(set.mode||'auto');
+  const d={title:title(),lang:$('#lang').value||'id'};
+  if(changed){
+    // keep speakers and hand-fixed pronunciations for lines whose text didn't change
+    const old=parseScript(set.script,set.mode||'auto',ordOf(set)),same=a=>a&&a.length===old.length;
+    const bySp=new Map(),byPr=new Map();old.forEach((it,i)=>{if(!bySp.has(it.t))bySp.set(it.t,same(set.spk)?set.spk[i]:it.sp);if(!byPr.has(it.t)&&same(set.pr)&&set.pr[i])byPr.set(it.t,set.pr[i])});
+    Object.assign(d,{script,mode,spk:items.map(it=>it.sp||bySp.get(it.t)||''),pr:items.map(it=>byPr.get(it.t)||'')});
+  }
+  $('#go').disabled=true;
+  try{
+    let blob=null;
+    if(toTts){if(!set.tts)Object.assign(d,{tts:true,segs:[],dur:null,name:''})}
+    else if(pickBlob||changed){
+      msg(pickBlob?'음성을 분석하는 중… (긴 파일은 몇 초 걸려요)':'바뀐 대본에 맞춰 음성을 다시 나누는 중…');await new Promise(r=>setTimeout(r,30));
+      blob=pickBlob||await getAudio(set).catch(()=>null);if(!blob)throw{code:'decode'};
+      let an,dur;try{({an,dur}=await decode(blob))}catch(e){throw{code:'decode'}}
+      d.segs=segment(an,items.map(i=>i.w));
+      if(pickBlob)Object.assign(d,{tts:false,dur:+dur.toFixed(2),name:pickBlob.name||''});
+    }
+    if(!B.remote){
+      if(toTts&&!set.tts)d.blob=null;else if(pickBlob)d.blob=pickBlob;
+      const arr=await lget(),x=arr.find(a=>a.id===set.id);if(x){Object.assign(x,d,{updatedAt:Date.now()});await lput(arr)}await reloadLocal();
+    }else{
+      const p=Object.assign({},d);
+      if(toTts&&!set.tts)Object.assign(p,{audio_path:null,audio_mime:null});
+      else if(pickBlob){msg('음성 파일을 올리는 중…');const a=await uploadAudio(pickBlob);Object.assign(p,{audio_path:a.path,audio_mime:a.mime})}
+      const {error}=await sb.rpc('update_set',{p_id:set.id,p_token:B.session,p,p_admin:adminArg()});
+      if(error){const t=String(error.message||'');if(isAuthErr(error)){logout(true);throw{code:'auth'}}throw{code:/too_big|bad_script/.test(t)?'too_big':/forbidden/.test(t)?'forbidden':'save'}}
+      if(v){const {data,error:e2}=await sb.rpc('share_set',{p_token:B.session,p_id:set.id,p_visibility:v.vis,p_users:v.vis==='partial'?v.users.map(x=>x.id):null});
+        if(e2||!data||data.error)note('공유 범위는 저장하지 못했어요. 세트 설정에서 다시 시도해 주세요.')}
+      while(loading)await new Promise(r=>setTimeout(r,100));
+      await load();
+    }
+    const n=B.all.find(x=>x.id===set.id);
+    EDIT=null;clearForm();msg('');openSet(n||set);
+  }catch(e){
+    const c=e&&e.code;
+    msg(c==='decode'?'음성 파일을 읽지 못했어요. mp3나 m4a로 다시 시도해 주세요.':c==='too_large'?'음성 파일이 너무 커요. 약 15MB 이하의 mp3·m4a로 줄여 주세요.':c==='unsupported_type'?'이 형식의 음성 파일은 올릴 수 없어요. mp3나 m4a로 바꿔 주세요.':c==='auth'?'로그인이 만료됐어요. 다시 로그인한 뒤 저장해 주세요.':c==='too_big'?'대본이 너무 길어요. 나눠서 올려 주세요.':c==='forbidden'?'이 세트를 올린 사람이나 관리자만 고칠 수 있어요.':c==='upload'?'음성 파일을 올리지 못했어요. 연결을 확인하고 다시 시도해 주세요.':'저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.');
+  }
+  $('#go').disabled=false;
 }
 
 /* ---------- list render ---------- */
@@ -828,15 +890,17 @@ for(const k of ['speed','rep','gap']){const el=$('#'+k),v=pref.get(k,null);if(v&
 if(pref.get('cont','1')==='0')$('#cont').setAttribute('aria-pressed','false');
 $('#speed').addEventListener('change',()=>{au.playbackRate=+$('#speed').value;if(S.playing&&S.tts&&!S.resting)speak()});
 $('#voice').onchange=()=>{pref.set('voice.'+(S.lang||'id'),$('#voice').value);if(S.playing&&S.tts)speak()};
-$('#go').onclick=()=>saveForm(false);
+$('#go').onclick=()=>EDIT?saveEdit():saveForm(false);
 $('#ttsGo').onclick=()=>saveForm(true);
 $('#addBtn').onclick=()=>{if(B.remote&&!B.session){showAuth('대본을 추가하려면 로그인해 주세요. 처음이면 회원가입을 눌러 주세요.','add');return}openForm()};
-$('#cancel').onclick=goLib;
+$('#cancel').onclick=()=>{if(EDIT){const s=EDIT;EDIT=null;clearForm();msg('');openSet(B.all.find(x=>x.id===s.id)||s)}else goLib()};
+$('#setBtn').onclick=()=>S.set&&openEdit(S.set);
 $('#backBtn').onclick=goLib;
 $('#delBtn').onclick=async()=>{const s=S.set;if(!s)return;$('#delBtn').disabled=true;
   try{await patchSet(s,{deletedAt:Date.now()});goLib();note('휴지통으로 옮겼어요: ‘'+(s.title||'제목 없음')+'’. 목록의 휴지통에서 되살릴 수 있어요.')}catch(e){note('휴지통으로 옮기지 못했어요.')}
   $('#delBtn').disabled=false};
-$('#audIn').onchange=e=>{const f=e.target.files[0];if(f){pickBlob=f;$('#fname').textContent=f.name;msg('')}};
+$('#audIn').onchange=e=>{const f=e.target.files[0];if(f){pickBlob=f;$('#fname').textContent=f.name;$('#toTts').checked=false;msg('')}};
+$('#toTts').onchange=()=>{if($('#toTts').checked&&pickBlob){pickBlob=null;$('#audIn').value='';$('#fname').textContent='선택된 파일 없음'}};
 $('#txtIn').onchange=async e=>{const f=e.target.files[0];if(f){$('#script').value=await f.text();msg('')}};
 document.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||$('#practice').classList.contains('hidden'))return;
   if(e.key===' '){e.preventDefault();$('#pp').click()}else if(e.key==='ArrowDown'||e.key==='ArrowRight'){e.preventDefault();$('#next').click()}else if(e.key==='ArrowUp'||e.key==='ArrowLeft'){e.preventDefault();$('#prev').click()}});
@@ -943,21 +1007,8 @@ function Picker(root){
     set(v,us){const r=root.querySelector(`input[value="${v}"]`)||root.querySelector('input[value="public"]');r.checked=true;users=(us||[]).map(x=>Object.assign({},x));inp.value='';sug.innerHTML='';paint()}};
 }
 $('#lang').innerHTML=LANGS.map(l=>`<option value="${l[0]}">${l[1]}</option>`).join('');
-const fPick=Picker($('#fVis')),sPick=Picker($('#sVis'));
+const fPick=Picker($('#fVis'));
 function shareInfo(s){return s.visibility==='partial'?`일부 공개 · ${s.shareCount||0}명에게 공유`:VIS_NAME[s.visibility]||''}
-function shareMsg(t){$('#shareMsg').textContent=t||''}
-$('#shareBtn').onclick=async()=>{const s=S.set;if(!s)return;show('#sharePanel',true);shareMsg('불러오는 중…');
-  let us=[];try{const {data}=await sb.rpc('get_shares',{p_token:B.session,p_id:s.id});us=data||[]}catch(e){}
-  sPick.set(s.visibility,us);shareMsg('');$('#sharePanel').scrollIntoView({block:'nearest'})};
-$('#shareCancel').onclick=()=>show('#sharePanel',false);
-$('#shareSave').onclick=async()=>{const s=S.set;if(!s)return;const v=sPick.get();
-  if(v.vis==='partial'&&!v.users.length){shareMsg('일부 공개는 공유할 사람을 한 명 이상 추가해 주세요.');return}
-  $('#shareSave').disabled=true;
-  try{const {data,error}=await sb.rpc('share_set',{p_token:B.session,p_id:s.id,p_visibility:v.vis,p_users:v.vis==='partial'?v.users.map(x=>x.id):null});
-    if(error||!data||data.error){shareMsg('저장하지 못했어요. 다시 시도해 주세요.');return}
-    await load();const n=B.all.find(x=>x.id===s.id);if(n){S.set=n;$('#shareInfo').textContent=shareInfo(n)}
-    shareMsg(v.vis==='partial'?'저장했어요. 새로 추가한 사람에게 알림이 가요.':'저장했어요.');setTimeout(()=>show('#sharePanel',false),1200)}
-  finally{$('#shareSave').disabled=false}};
 $('#leaveBtn').onclick=async()=>{const s=S.set;if(!s)return;$('#leaveBtn').disabled=true;
   try{const {data,error}=await sb.rpc('respond_share',{p_token:B.session,p_set_id:s.id,p_accept:false});
     if(error||!data||data.error){note('처리하지 못했어요. 다시 시도해 주세요.');return}

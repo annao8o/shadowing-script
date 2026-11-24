@@ -65,6 +65,17 @@ check(await titles(bu.token) === 'part,pub', 'accepted set visible to recipient'
 check(String(await q(`select update_set($1,$2,'{"pr":[]}'::jsonb)`, [part, bu.token])).startsWith('ERR'), 'recipient cannot edit');
 check(!String(await q(`select update_set($1,$2,'{"pr":[]}'::jsonb,$3)`, [part, bu.token, ADMIN])).startsWith('ERR'), 'admin key can edit');
 check(String(await q(`select create_set('{"script":"x"}'::jsonb,null)`)).startsWith('ERR'), 'guest cannot create');
+
+console.log('set settings');
+const ed = await mk('edit me', 'private', { tts: true });
+await one('select update_set($1,$2,$3::jsonb)', [ed, ja.token, JSON.stringify({ script: 'a\nb', mode: 'line', tts: false, audio_path: 'x.m4a', audio_mime: 'audio/mp4', dur: 3.5, name: 'rec.m4a', segs: [{ s: 0, e: 1 }, { s: 1, e: 2 }] })]);
+let row = (await one('select list_sets($1)', [ja.token])).find((r) => r.id === ed);
+check(row.script === 'a\nb' && row.mode === 'line' && row.tts === false && row.audio_path === 'x.m4a' && row.dur === 3.5 && row.segs.length === 2, 'owner can add a recording and change the script');
+await one('select update_set($1,$2,$3::jsonb)', [ed, ja.token, JSON.stringify({ tts: true, audio_path: null, audio_mime: null, dur: null, segs: [] })]);
+row = (await one('select list_sets($1)', [ja.token])).find((r) => r.id === ed);
+check(row.tts === true && row.audio_path === null && row.dur === null && row.script === 'a\nb', 'owner can switch back to machine voice; untouched fields stay');
+check(String(await q(`select update_set($1,$2,'{"script":""}'::jsonb)`, [ed, ja.token])).startsWith('ERR'), 'empty script rejected');
+check(String(await q(`select update_set($1,$2,'{"title":"x"}'::jsonb)`, [ed, bu.token])).startsWith('ERR'), 'other user cannot change settings');
 check(!JSON.stringify(await one('select list_sets(null)')).includes('owner_hash'), 'owner_hash never returned');
 
 console.log(failures.length ? `\nFAILED: ${failures.join(', ')}` : '\nall checks passed');
