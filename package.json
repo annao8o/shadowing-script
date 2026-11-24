@@ -1,0 +1,13 @@
+{
+  "name": "shadowing-script",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:db": "node tests/db_test.mjs",
+    "test:ui": "python3 tests/e2e_test.py",
+    "test": "npm run test:db && npm run test:ui"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.14"
+  }
+}

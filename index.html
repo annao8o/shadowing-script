@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>쉐도잉 스크립트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: practical rehearsal tool, warm and quick to use with one thumb
+   IDEA: a prompter script — numbered lines you tap to hear
+   PICTURE: the whole recording as a white waveform on the Indonesian red band, cut into line segments
+   COLOUR and TYPE: merah #c8102e band + white, ink text; Plus Jakarta Sans (named after Jakarta) + Noto Sans KR
+   LAYOUT: red band (title + waveform), setup card, option chips, line list, sticky transport bar */
+:root{color-scheme:light dark;--s0:light-dark(#c8102e,#ff7487);--s1:light-dark(#0f766e,#4fd1c0);--s2:light-dark(#4338ca,#a5b4fc);--s3:light-dark(#b45309,#fbbf24);--s4:light-dark(#15803d,#6ee7a0);--s5:light-dark(#9333ea,#d8b4fe);--s6:light-dark(#0369a1,#7dd3fc);--s7:light-dark(#be185d,#f9a8d4);--bg:light-dark(#ffffff,#141113);--ink:light-dark(#1b1416,#f3eced);--mute:light-dark(#6d6164,#a99ea1);--line:light-dark(#ece2e4,#2f2729);--red:#c8102e;--redink:light-dark(#a30d25,#ff7487);--rose:light-dark(#fcecef,#2c1a1f);--card:light-dark(#ffffff,#1b1618);--chip:light-dark(#f5eff0,#231d1f)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Plus Jakarta Sans","Noto Sans KR",system-ui,sans-serif;overflow-x:clip;padding-bottom:96px}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--redink);outline-offset:2px}
+.top{background:var(--red);color:#fff;padding:clamp(20px,4vw,40px) max(5vw,16px) 18px}
+.top h1{margin:0;font-size:clamp(28px,6vw,44px);line-height:1.05;font-weight:800;letter-spacing:-.01em;text-wrap:balance}
+.top p{margin:6px 0 0;opacity:.88;font-size:15px}
+.wave{position:relative;height:120px;margin-top:18px;border-radius:12px;background:rgba(0,0,0,.14);touch-action:manipulation}
+.wave canvas{position:absolute;inset:0;width:100%;height:100%;cursor:pointer}
+.wave .empty{position:absolute;inset:0;display:grid;place-items:center;font-size:14px;opacity:.8;text-align:center;padding:0 16px}
+.wrap{max-width:860px;margin:0 auto;padding:0 max(4vw,14px)}
+.setup{margin:20px 0;border:1px solid var(--line);border-radius:16px;background:var(--card);padding:18px}
+.setup h2{margin:0 0 12px;font-size:20px}
+.setup label.f{display:block;font-weight:700;font-size:15px;margin:14px 0 6px}
+textarea{width:100%;min-height:170px;border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:12px;font-size:16px;line-height:1.5;resize:vertical}
+.file{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.file input[type=file]{display:none}
+.btn{min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--chip);font-weight:600;font-size:15px;display:inline-flex;align-items:center;gap:6px}
+.btn.main{background:var(--red);border-color:var(--red);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.fname{font-size:14px;color:var(--mute);overflow-wrap:anywhere}
+.hint{font-size:13.5px;color:var(--mute);margin:8px 0 0}
+.hint code{background:var(--chip);padding:1px 5px;border-radius:5px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px}
+select{min-height:44px;border-radius:999px;border:1px solid var(--line);background:var(--chip);padding:0 12px;font-size:16px}
+#msg{font-size:14.5px;margin-top:12px;color:var(--redink);min-height:1em}
+.opts{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 12px;align-items:center}
+.opts label{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--mute)}
+.opts select{min-height:40px;font-size:15px;padding:0 10px}
+.tg{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:14px;font-weight:600}
+.tg[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.sum{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:24px}
+.sum h2{margin:0;font-size:20px}
+.sum span{font-size:14px;color:var(--mute)}
+ol.lines{list-style:none;margin:0 0 20px;padding:0;display:grid;gap:8px}
+.ln{display:grid;grid-template-columns:34px minmax(0,1fr) 48px;gap:12px;align-items:start;padding:12px;border-radius:14px;background:var(--card);border:1px solid var(--line);cursor:pointer;transition:background .15s}
+.ln.on{background:var(--rose);border-color:var(--redink)}
+.no{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:14px;font-weight:700;background:var(--chip);font-variant-numeric:tabular-nums}
+.ln.on .no{background:var(--red);color:#fff}
+.tx{font-size:18px;line-height:1.45;font-weight:500;overflow-wrap:anywhere}
+.ko{font-size:14.5px;color:var(--mute);margin-top:2px;font-family:"Noto Sans KR",sans-serif}
+.tm{font-size:12.5px;color:var(--mute);margin-top:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pl{width:48px;height:48px;border-radius:50%;border:0;background:var(--red);color:#fff;display:grid;place-items:center}
+.pl svg{width:20px;height:20px}
+body.hid .tx{filter:blur(7px);user-select:none}
+body.hid .ln.peek .tx{filter:none}
+body.hko .ko{display:none}
+.ed{display:none;grid-column:2/4;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:13.5px;color:var(--mute)}
+body.edit .ed{display:flex}
+.ed span{display:inline-flex;gap:4px;align-items:center}
+.ed button{min-width:44px;min-height:36px;border-radius:10px;border:1px solid var(--line);background:var(--chip);font-size:14px;font-weight:600}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px max(4vw,14px) calc(10px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px;z-index:5}
+.bar .now{flex:1;font-size:14px;line-height:1.35;overflow:hidden}
+.bar .now b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px}
+.bar .now small{color:var(--mute);font-variant-numeric:tabular-nums}
+.ic{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--chip);display:grid;place-items:center;flex:none}
+.ic.big{width:54px;height:54px;background:var(--red);border-color:var(--red);color:#fff}
+.ic svg{width:20px;height:20px}
+.hidden{display:none!important}
+@media(max-width:600px){.tx{font-size:17px}.ln{grid-template-columns:30px minmax(0,1fr) 46px;gap:10px;padding:11px}.no{width:30px;height:30px;font-size:13px}.pl{width:46px;height:46px}}
+.inp{width:100%;min-height:44px;border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:0 12px;font-size:16px}
+.note{margin:16px 0 0;padding:10px 14px;border-radius:12px;background:var(--rose);font-size:14px;position:sticky;top:8px;z-index:6;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.sets{list-style:none;margin:12px 0 24px;padding:0;display:grid;gap:8px}
+.set{display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;border:1px solid var(--line);background:var(--card);cursor:pointer;width:100%;text-align:start}
+.set b{display:block;font-size:17px;overflow-wrap:anywhere}
+.set small{color:var(--mute);font-size:13.5px}
+.set .go{margin-inline-start:auto;flex:none;width:40px;height:40px;border-radius:50%;background:var(--red);color:#fff;display:grid;place-items:center}
+.empty-l{padding:20px;border:1px dashed var(--line);border-radius:14px;color:var(--mute);font-size:15px;text-align:center}
+.back{min-height:44px;border:0;background:none;padding:0;margin-top:14px;font-weight:700;color:var(--redink);font-size:15px}
+.del{margin:8px 0 28px;font-size:14px;color:var(--mute);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.del span{display:inline-flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sum .btn{margin-inline-start:auto}
+.spkbar{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.sc{min-height:40px;padding:0 14px;border-radius:999px;border:1.5px solid var(--c,var(--line));background:transparent;font-size:14px;font-weight:700;color:var(--c,var(--ink))}
+.sc[aria-pressed=true]{background:var(--c,var(--ink));color:var(--bg);border-color:var(--c,var(--ink))}
+.sc small{font-weight:500;opacity:.8;margin-inline-start:4px;font-size:13px}
+.pill{display:inline-block;font-size:12.5px;font-weight:700;color:var(--c);border:1.5px solid var(--c);border-radius:999px;padding:0 8px;margin-bottom:4px;line-height:20px;overflow-wrap:anywhere}
+.ln.off{display:none}
+.spe{display:none;grid-column:2/4;flex-wrap:wrap;gap:6px;align-items:center}
+body.spk .spe{display:flex}
+.spe button{min-height:36px;padding:0 12px;border-radius:999px;border:1.5px solid var(--c,var(--line));background:transparent;color:var(--c,var(--ink));font-size:14px;font-weight:600}
+.spe button[aria-pressed=true]{background:var(--c,var(--ink));color:var(--bg)}
+.spe input{min-height:36px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font-size:16px;width:9em;background:var(--bg)}
+.mine{color:var(--redink);font-weight:700}
+.pr{font-size:15px;line-height:1.45;margin-top:2px;color:light-dark(#8a2033,#ffb3bf);font-family:"Noto Sans KR",sans-serif;overflow-wrap:anywhere}
+body.hpr .pr{display:none}
+body.hid .pr{filter:blur(6px)}
+body.hid .ln.peek .pr{filter:none}
+.pre{display:none;grid-column:2/4}
+body.pred .pre{display:block}
+.pre input{width:100%;min-height:40px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font-size:16px;background:var(--bg);font-family:"Noto Sans KR",sans-serif}
+.key{font-size:14px;background:var(--chip);padding:8px 10px;border-radius:8px;overflow-wrap:anywhere;flex:1;min-width:10em}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+#auth .inp+.inp{margin-top:8px}
+.inbox{display:grid;gap:8px;margin-top:14px}
+.inv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:14px;border-radius:14px;background:var(--rose);border:1px solid var(--redink)}
+.inv b{font-size:15.5px}.inv small{display:block;color:var(--mute);font-size:13px}
+.inv .acts{display:flex;gap:6px;flex-wrap:wrap}
+.inv .acts button{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-weight:700;font-size:14px}
+.inv .acts button.ok{background:var(--red);border-color:var(--red);color:#fff}
+@media(max-width:600px){.inv{grid-template-columns:minmax(0,1fr)}}
+.lt{display:inline-block;font-size:12px;font-weight:700;padding:0 7px;border-radius:6px;background:var(--chip);color:var(--ink);margin-inline-end:6px;line-height:20px;vertical-align:1px}
+.vis{display:grid;gap:6px}
+.vis label{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:12px;cursor:pointer;font-weight:600;font-size:15px}
+.vis label:has(input:checked){border-color:var(--redink);background:var(--rose)}
+.vis input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--red);flex:none}
+.vis small{display:block;font-weight:400;color:var(--mute);font-size:13px}
+.mention{margin-top:10px}
+.mchips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.mchip{display:inline-flex;align-items:center;gap:4px;min-height:36px;padding:0 6px 0 12px;border-radius:999px;background:var(--chip);font-size:14px;font-weight:600}
+.mchip em{font-style:normal;font-weight:500;font-size:12px;color:var(--mute)}
+.mchip button{width:30px;height:30px;border:0;background:none;border-radius:50%;font-size:16px;color:var(--mute)}
+.sugg{list-style:none;margin:4px 0 0;padding:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
+.sugg:empty{display:none}
+.sugg button{display:block;width:100%;text-align:start;min-height:44px;padding:8px 12px;border:0;border-top:1px solid var(--line);background:none;font-size:15px}
+.sugg li:first-child button{border-top:0}
+.sugg small{color:var(--mute);margin-inline-start:6px}
+.chk{display:flex;gap:10px;align-items:center;font-size:15px;min-height:44px}
+.chk input{width:20px;height:20px;accent-color:var(--red)}
+.bkmsg{font-size:14.5px;margin-top:12px;min-height:1em;white-space:pre-line}
+.tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:14px;border-radius:14px;border:1px solid var(--line);background:var(--card)}
+.tr b{display:block;font-size:16px;overflow-wrap:anywhere}.tr small{color:var(--mute);font-size:13.5px}
+.tr .acts{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.tr .acts button{min-height:40px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--chip);font-size:14px;font-weight:600}
+.tr .acts button.warn{background:var(--red);border-color:var(--red);color:#fff}
+@media(max-width:600px){.tr{grid-template-columns:minmax(0,1fr)}.tr .acts{justify-content:flex-start}}
+@media(prefers-reduced-motion:reduce){.ln{transition:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Shadowing Script</h1>
+  <p>외국어 대본을 멘트별로 듣고 따라 말하는 쉐도잉 연습장</p>
+  <div class="wave" id="wave"><canvas id="cv" aria-label="음성 파형. 누르면 해당 멘트를 재생합니다"></canvas><div class="empty" id="wEmpty">세트를 열면 여기에 파형과 멘트 구간이 표시됩니다</div></div>
+</header>
+<main class="wrap">
+  <p class="note hidden" id="note"></p>
+  <section class="setup hidden" id="auth">
+    <button class="back" id="authBack" type="button" style="margin-top:0">← 로그인 없이 둘러보기</button>
+    <p class="hint" id="authWhy" style="margin:4px 0 12px"></p>
+    <div class="tabs" role="group" aria-label="로그인 또는 회원가입"><button class="tg" id="tabIn" type="button" aria-pressed="true">로그인</button><button class="tg" id="tabUp" type="button" aria-pressed="false">처음이에요 · 회원가입</button></div>
+    <form id="authForm" novalidate>
+      <div class="upOnly hidden"><label class="f" for="auName">이름 (다른 사람에게 보이는 이름)</label><input id="auName" class="inp" maxlength="20" autocomplete="nickname" placeholder="예: 조안나"></div>
+      <label class="f" for="auId">아이디</label><input id="auId" class="inp" maxlength="20" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+      <p class="hint upOnly hidden" style="margin-top:6px">영문 소문자·숫자·_ . - 로 3~20자</p>
+      <label class="f" for="auPw">비밀번호</label><input id="auPw" type="password" class="inp" autocomplete="current-password">
+      <div class="upOnly hidden"><label class="f" for="auPw2">비밀번호 확인</label><input id="auPw2" type="password" class="inp" autocomplete="new-password"><p class="hint" style="margin-top:6px">6자 이상</p></div>
+      <div id="auCodeRow" class="hidden"><label class="f" for="auCode">참여 코드</label><input id="auCode" class="inp" autocomplete="off" placeholder="사이트를 알려 준 사람에게 받은 코드"></div>
+      <div class="row"><button class="btn main" id="auGo" type="submit">로그인</button></div>
+      <div id="auMsg" class="bkmsg" role="status"></div>
+    </form>
+    <p class="hint">비밀번호를 잊었다면 사이트 관리자에게 새 비밀번호를 부탁하세요.</p>
+  </section>
+  <section id="lib">
+    <div class="sum"><h2>연습 세트</h2><span id="hello"></span></div>
+    <div class="row" style="margin-top:10px"><button class="btn main hidden" id="addBtn">+ 새 대본 추가</button><button class="btn hidden" id="inboxBtn">알림</button><button class="btn" id="bkBtn">백업</button><button class="btn" id="meBtn">내 정보</button><button class="btn hidden" id="trBtn">휴지통</button></div>
+    <div class="inbox hidden" id="inbox" role="region" aria-label="공유 알림"></div>
+    <div class="spkbar hidden" id="langBar" role="group" aria-label="언어별 보기" style="margin-top:14px"></div>
+    <ul class="sets" id="sets"><li class="empty-l">불러오는 중…</li></ul>
+  </section>
+
+  <section class="setup hidden" id="bk">
+    <h2>백업</h2>
+    <p class="hint" style="margin-top:0">지금 보이는 모든 세트(휴지통 포함)의 대본·화자·발음·구간을 파일 하나로 내려받아요. 이 파일로 언제든 다시 불러올 수 있어요.</p>
+    <label class="chk"><input type="checkbox" id="bkAudio"> 녹음 파일도 포함 (파일이 커지지만 녹음까지 복구 가능)</label>
+    <div class="row"><button class="btn main" id="bkSave">백업 파일 내려받기</button><label class="btn hidden" for="bkIn" id="bkInL">백업 불러오기</label><input type="file" id="bkIn" accept=".json,application/json" class="hidden"><button class="btn" id="bkClose">닫기</button></div>
+    <div id="bkMsg" class="bkmsg" role="status"></div>
+  </section>
+
+  <section class="setup hidden" id="me">
+    <h2>내 정보</h2>
+    <p class="hint" style="margin-top:0" id="meWho"></p>
+    <label class="f" for="meName">이름</label>
+    <div class="file"><input id="meName" class="inp" style="flex:1;min-width:10em" maxlength="20"><button class="btn" id="meNameSave">저장</button></div>
+    <label class="f" for="pwOld">비밀번호 바꾸기</label>
+    <input id="pwOld" type="password" class="inp" placeholder="지금 비밀번호" autocomplete="current-password">
+    <input id="pwNew" type="password" class="inp" placeholder="새 비밀번호 (6자 이상)" autocomplete="new-password" style="margin-top:8px">
+    <div class="row"><button class="btn" id="pwGo">비밀번호 바꾸기</button></div>
+    <label class="f" for="adminIn">관리자 키 (사이트 주인만)</label>
+    <div class="file"><input id="adminIn" type="password" class="inp" style="flex:1;min-width:12em" autocomplete="off"><button class="btn" id="adminGo">관리자 모드</button><button class="btn hidden" id="adminOff">끄기</button></div>
+    <p class="hint" id="adminState"></p>
+    <div id="resetBox" class="hidden">
+      <label class="f" for="rsId">다른 사람 비밀번호 새로 정해 주기</label>
+      <input id="rsId" class="inp" placeholder="그 사람의 아이디" autocapitalize="none" autocomplete="off">
+      <input id="rsPw" class="inp" placeholder="새 비밀번호 (6자 이상)" autocomplete="off" style="margin-top:8px">
+      <div class="row"><button class="btn" id="rsGo">새 비밀번호로 바꾸기</button></div>
+    </div>
+    <div class="row"><button class="btn" id="logoutBtn">로그아웃</button><button class="btn" id="meClose">닫기</button></div>
+    <div id="meMsg" class="bkmsg" role="status"></div>
+  </section>
+
+  <section class="hidden" id="trash">
+    <button class="back" id="trBack">← 목록</button>
+    <div class="sum"><h2>휴지통</h2><span>영구 삭제하기 전까지 보관돼요</span></div>
+    <ul class="sets" id="trList"></ul>
+  </section>
+
+  <section class="setup hidden" id="setup">
+    <h2>새 대본 추가</h2>
+    <label class="f" for="title">제목</label>
+    <input id="title" class="inp" placeholder="예: 학회 발표 인사말" maxlength="80">
+    <label class="f" for="lang">연습할 언어</label>
+    <select id="lang" class="inp" style="border-radius:12px"></select>
+    <div id="fVisWrap"><label class="f">공유 범위</label><div id="fVis"></div></div>
+    <label class="f" for="script">1. 대본 (한 줄에 한 멘트)</label>
+    <textarea id="script" placeholder="MC: Selamat pagi, semuanya. | 슬라맛 빠기 | 좋은 아침입니다&#10;Nama saya Joanna.&#10;Hari ini saya akan memperkenalkan penelitian kami."></textarea>
+    <div class="file" style="margin-top:8px"><label class="btn" for="txtIn">텍스트 파일 불러오기</label><input type="file" id="txtIn" accept=".txt,text/plain"></div>
+    <p class="hint">화자는 <code>이름: 대사</code>처럼 앞에 적으면 자동으로 지정돼요 (나중에 바꿀 수 있어요). 발음과 번역은 <code>대사 | 한글 발음 | 한국어 뜻</code> 순서로 적어요. 인도네시아어·말레이어는 발음 칸을 비우면 (<code>대사 | | 한국어 뜻</code>) 한글 발음이 자동으로 붙어요. 문단으로 붙여 넣었다면 아래에서 ‘문장 단위’를 고르세요.</p>
+    <label class="f">2. 음성 파일 (대본 전체 녹음) — 없으면 건너뛰세요</label>
+    <div class="file"><label class="btn" for="audIn">음성 파일 선택</label><input type="file" id="audIn" accept="audio/*,video/*,.m4a,.mp3,.wav,.aac,.ogg,.webm"><span class="fname" id="fname">선택된 파일 없음</span></div>
+    <p class="hint">m4a·mp3 권장 (최대 약 15MB).</p>
+    <div class="row">
+      <select id="mode" aria-label="나누기 기준"><option value="auto">자동 판단</option><option value="line">줄 단위로 나누기</option><option value="sentence">문장 단위로 나누기</option></select>
+    </div>
+    <div class="row">
+      <button class="btn main" id="go">멘트별로 자동 분할 후 저장</button>
+      <button class="btn" id="ttsGo">음성 파일 없이 기계 음성으로 저장</button>
+      <button class="btn" id="cancel">취소</button>
+    </div>
+    <div id="msg" role="status"></div>
+  </section>
+
+  <section id="practice" class="hidden">
+    <button class="back" id="backBtn">← 목록</button>
+    <div class="sum"><h2 id="sumT">멘트</h2><span id="sumS"></span></div>
+    <div class="opts">
+      <label id="voiceL" class="hidden">음성 <select id="voice" style="max-width:220px"></select></label>
+      <label>속도 <select id="speed"><option value="0.6">0.6×</option><option value="0.75">0.75×</option><option value="0.9">0.9×</option><option value="1" selected>1×</option><option value="1.15">1.15×</option></select></label>
+      <label>반복 <select id="rep"><option value="1">1번</option><option value="2">2번</option><option value="3">3번</option><option value="5">5번</option><option value="0">계속</option></select></label>
+      <label>따라 말할 쉼 <select id="gap"><option value="0">없음</option><option value="0.5">짧게</option><option value="1">문장 길이만큼</option><option value="1.5">넉넉히</option></select></label>
+      <button class="tg" id="cont" aria-pressed="true">다음 멘트로 이어서</button>
+      <button class="tg" id="hideId" aria-pressed="false">대본 가리기</button>
+      <button class="tg" id="showPr" aria-pressed="true">발음 표시</button>
+      <button class="tg" id="hideKo" aria-pressed="false">번역 가리기</button>
+      <button class="tg" id="edit" aria-pressed="false">구간 수정</button>
+      <button class="tg hidden" id="spkEdit" aria-pressed="false">화자 지정</button>
+      <button class="tg hidden" id="prEdit" aria-pressed="false">발음 수정</button>
+    </div>
+    <p class="hint hidden" id="editHint">시작·끝을 조정하면 바뀐 부분을 바로 들려주고 자동 저장합니다. 조정 단위 <select id="step" style="min-height:36px;font-size:14px"><option value="0.1">0.1초</option><option value="0.5">0.5초</option></select></p>
+    <p class="hint hidden" id="prHint">한글 발음은 자동으로 만들어져요. 어색한 줄은 고쳐 쓰면 저장되고, 비우면 자동 발음으로 돌아가요.</p>
+    <p class="hint hidden" id="spkHint">멘트마다 아래 화자 버튼을 눌러 지정하세요. ‘+ 새 화자’로 이름을 추가할 수 있어요.</p>
+    <div class="spkbar hidden" id="spkBar" role="group" aria-label="화자별 보기"></div>
+    <ol class="lines" id="list"></ol>
+    <div class="del hidden" id="shareBox"><button class="btn" id="shareBtn">공유 설정</button><span id="shareInfo"></span></div>
+    <section class="setup hidden" id="sharePanel" style="margin-top:8px">
+      <h2>공유 설정</h2>
+      <div id="sVis"></div>
+      <div class="row"><button class="btn main" id="shareSave">저장</button><button class="btn" id="shareCancel">닫기</button></div>
+      <div id="shareMsg" class="bkmsg" role="status"></div>
+    </section>
+    <div class="del hidden" id="leaveBox"><button class="btn" id="leaveBtn">내 목록에서 빼기</button><span>공유받은 세트예요</span></div>
+    <div class="del hidden" id="delBox"><button class="btn" id="delBtn">휴지통으로 이동</button></div>
+  </section>
+</main>
+<div class="bar hidden" id="bar">
+  <button class="ic" id="prev" aria-label="이전 멘트"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+  <button class="ic big" id="pp" aria-label="재생"><svg viewBox="0 0 24 24" fill="currentColor" id="ppI"><path d="M7 4v16l13-8z"/></svg></button>
+  <button class="ic" id="next" aria-label="다음 멘트"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+  <div class="now"><b id="nowT">멘트를 눌러 들어 보세요</b><small id="nowS"></small></div>
+</div>
+<audio id="au" preload="auto" playsinline></audio>
+<script>
+/* ★ Supabase 설정 — README 2단계에서 복사한 두 값을 따옴표 안에 넣으세요 ★ */
+window.NASKAH_CONFIG = {
+  url: 'https://YOUR-PROJECT.supabase.co',
+  key: 'YOUR-ANON-OR-PUBLISHABLE-KEY'
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script>
+{
+//#core-start
+function splitSpeaker(ln){
+  const m=ln.match(/^\s*([^:：|.!?…\t]{1,24}?)\s*[:：]\s*(\S.*)$/);
+  if(!m)return{sp:'',body:ln};
+  const name=m[1].trim();
+  if(!name||/\d$/.test(name)&&/^\d/.test(m[2])||/^\d+$/.test(name)||name.split(/\s+/).length>3||/^https?$/i.test(name))return{sp:'',body:ln};
+  return{sp:name,body:m[2]};
+}
+function parseScript(text,mode,order){
+  const pk=order!=='kp';
+  const raw=String(text||'').replace(/\r/g,'').split('\n').map(s=>s.trim()).filter(Boolean);
+  const useSent=mode==='sentence'||(mode==='auto'&&raw.length<2);
+  const items=[];
+  for(const ln0 of raw){
+    const {sp,body:ln}=splitSpeaker(ln0);
+    if(useSent&&!/\||\t/.test(ln)){
+      const parts=ln.match(/[^.!?…。！？]+[.!?…。！？]+["'”’)\]」』]*|[^.!?…。！？]+$/g)||[ln];
+      for(const p of parts){const t=p.trim();if(t)items.push({t,ko:'',pr:'',sp})}
+    }else{
+      const parts=ln.split(/\s*\|\s*|\t+/);items.push({t:parts[0],pr:(pk?parts[1]:parts[2])||'',ko:(pk?parts[2]:parts[1])||'',sp});
+    }
+  }
+  for(const it of items){
+    const body=it.t.replace(/[\[(（][^\])）]*[\])）]/g,'');
+    const L=(body.match(/[\p{L}]/gu)||[]).length,D=(body.match(/\p{N}/gu)||[]).length;
+    it.w=Math.max(2,L+D*3)+3;
+  }
+  return items;
+}
+function analyze(chs,sr){
+  const hop=Math.max(1,Math.round(sr*0.01)),n=chs[0].length,F=Math.floor(n/hop),nc=chs.length;
+  const db=new Float32Array(F),pk=new Float32Array(F);
+  for(let f=0;f<F;f++){
+    let s=0,p=0;const a=f*hop,b=Math.min(n,a+hop*2),len=b-a;
+    for(let i=a;i<b;i++){let v=0;for(let c=0;c<nc;c++)v+=chs[c][i];v/=nc;s+=v*v;const av=v<0?-v:v;if(av>p)p=av}
+    db[f]=10*Math.log10(s/len+1e-12);pk[f]=p;
+  }
+  return {db,pk,hop:hop/sr,F};
+}
+function findGaps(db,F,frac,minRun){
+  const sm=new Float32Array(F);
+  for(let f=0;f<F;f++){let s=0,c=0;for(let k=-2;k<=2;k++){const g=f+k;if(g>=0&&g<F){s+=db[g];c++}}sm[f]=s/c}
+  const sorted=Array.from(sm).sort((x,y)=>x-y);
+  const lo=sorted[Math.floor(F*0.08)],hi=sorted[Math.min(F-1,Math.floor(F*0.97))];
+  const thr=lo+frac*(hi-lo),sil=new Uint8Array(F);
+  for(let f=0;f<F;f++)sil[f]=sm[f]<thr?1:0;
+  let f=0;
+  while(f<F){if(!sil[f]){let g=f;while(g<F&&!sil[g])g++;if(g-f<4&&f>0&&g<F)for(let k=f;k<g;k++)sil[k]=1;f=g}else f++}
+  let first=0;while(first<F-1&&sil[first])first++;
+  let last=F-1;while(last>first&&sil[last])last--;
+  const gaps=[];f=first;
+  while(f<=last){if(sil[f]){let g=f;while(g<=last&&sil[g])g++;if(g-f>=minRun)gaps.push({a:f,b:g});f=g}else f++}
+  return {first,last:last+1,gaps};
+}
+function segment(an,w){
+  const N=w.length,h=an.hop,dur=an.F*h;
+  if(!N)return[];
+  let G=null;
+  for(const [fr,mr] of [[.3,8],[.42,6],[.55,4]]){G=findGaps(an.db,an.F,fr,mr);if(G.gaps.length>=N-1)break}
+  const s0=G.first*h,s1=G.last*h;
+  if(N===1)return[{s:Math.max(0,s0-.15),e:Math.min(dur,s1+.3)}];
+  const nodes=G.gaps.map(g=>{const d=(g.b-g.a)*h;return{a:g.a*h,b:g.b*h,d,r:1.5*Math.log(1+d/0.15)}});
+  if(nodes.length<N-1){
+    const step=Math.max(0.05,(s1-s0)/(N*4));
+    for(let t=s0+step;t<s1-step/2;t+=step)if(!nodes.some(n=>t>=n.a-0.05&&t<=n.b+0.05))nodes.push({a:t,b:t,d:0,r:-2});
+    nodes.sort((x,y)=>x.a-y.a);
+  }
+  const W=w.reduce((x,y)=>x+y,0);
+  const top=nodes.map(n=>n.d).sort((x,y)=>y-x).slice(0,N-1).reduce((x,y)=>x+y,0);
+  const rate=Math.max(0.3*(s1-s0),s1-s0-top)/W;
+  const P=[{a:s0,b:s0,d:0,r:0},...nodes,{a:s1,b:s1,d:0,r:0}],M=P.length,INF=1e18;
+  let prev=new Float64Array(M).fill(INF);prev[0]=0;
+  const back=[];
+  for(let k=0;k<N;k++){
+    const cur=new Float64Array(M).fill(INF),bk=new Int32Array(M).fill(-1);
+    const ex=w[k]*rate,last=k===N-1;
+    for(let j=last?M-1:k+1;j<=(last?M-1:M-2);j++){
+      let best=INF,bi=-1;
+      for(let i=j-1;i>=k;i--){
+        const d=P[j].a-P[i].b;
+        if(d>ex*8+12)break;
+        if(prev[i]>=INF||d<0.08)continue;
+        const l=Math.log(d/ex),c=prev[i]+3*l*l;
+        if(c<best){best=c;bi=i}
+      }
+      if(bi>=0){cur[j]=best-(last?0:P[j].r);bk[j]=bi}
+    }
+    back.push(bk);prev=cur;
+  }
+  if(prev[M-1]>=INF){
+    const out=[];let acc=0;
+    for(let k=0;k<N;k++){const a=s0+(s1-s0)*acc/W;acc+=w[k];out.push({s:a,e:s0+(s1-s0)*acc/W})}
+    return out;
+  }
+  let j=M-1;const cut=[];
+  for(let k=N-1;k>=0;k--){const i=back[k][j];cut.unshift([i,j]);j=i}
+  return cut.map(([i,j])=>{const A=P[i],B=P[j];
+    const s=i===0?Math.max(0,s0-.15):A.b-Math.min(.15,A.d/2);
+    const e=j===M-1?Math.min(dur,s1+.3):B.a+Math.min(.3,B.d/2);
+    return{s:+s.toFixed(3),e:+e.toFixed(3)}});
+}
+//#core-end
+//#pron-start
+const PRON_EX={enak:'에낙',sore:'소레',meja:'메자',korea:'꼬레아',desa:'데사',merah:'메라',besok:'베속',peta:'뻬따',ekor:'에꼬르',nenek:'네넥',kakek:'까껙',boleh:'볼레',mereka:'므레까',sate:'사떼',kafe:'까페',presiden:'쁘레시덴',telepon:'뗄레뽄',hotel:'호뗄',ide:'이데',tempe:'뗌뻬',bebek:'베벡',becak:'베짝',kare:'까레',sen:'센',tes:'떼스',ekonomi:'에꼬노미',teknologi:'떽놀로기',teknik:'떽닉',enam:'으남',saudara:'사우다라',indonesia:'인도네시아',jakarta:'자까르따',bali:'발리',oke:'오께',dosen:'도센',seminar:'세미나르',ekspor:'엑스뽀르',sistem:'시스뗌',model:'모델',data:'다따',email:'이메일',seoul:'서울',metode:'메또데',universitas:'우니페르시따스',internet:'인떠르넷',video:'비데오',radio:'라디오',televisi:'뗄레피시',bus:'부스',taksi:'딱시',kereta:'끄레따',ekspres:'엑스쁘레스',pesawat:'쁘사왓',restoran:'레스또란',menu:'메누',lele:'렐레',es:'에스',meter:'메떠르',sekretaris:'세끄레따리스',proyek:'쁘로옉',efektif:'에펙띠프',efisien:'에피시엔',energi:'에네르기',generasi:'게네라시',teori:'떼오리',kategori:'까떼고리',problem:'쁘로블렘',dolar:'돌라르',kompleks:'꼼쁠렉스'};
+const HJ={L:'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ',V:['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ','ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ'],T:['','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ']};
+const hj=(l,v,t)=>String.fromCharCode(0xAC00+(HJ.L.indexOf(l)*21+HJ.V.indexOf(v))*28+HJ.T.indexOf(t||''));
+const ON={b:'ㅂ',c:'ㅉ',d:'ㄷ',f:'ㅍ',g:'ㄱ',h:'ㅎ',j:'ㅈ',k:'ㄲ',kh:'ㅎ',l:'ㄹ',m:'ㅁ',n:'ㄴ',ny:'ㄴ',p:'ㅃ',q:'ㄲ',r:'ㄹ',s:'ㅅ',sy:'ㅅ',t:'ㄸ',v:'ㅍ',x:'ㅅ',z:'ㅈ',ng:'ㅇ',y:'ㅇ',w:'ㅇ'};
+const VW={a:'ㅏ',i:'ㅣ',u:'ㅜ',o:'ㅗ',e:'ㅡ','é':'ㅔ'},VY={a:'ㅑ',i:'ㅣ',u:'ㅠ',o:'ㅛ',e:'ㅕ','é':'ㅖ'},VWW={a:'ㅘ',i:'ㅟ',u:'ㅜ',o:'ㅝ',e:'ㅝ','é':'ㅞ'};
+const CODA={k:'ㄱ',p:'ㅂ',t:'ㅅ',m:'ㅁ',n:'ㄴ',ng:'ㅇ',l:'ㄹ',b:'ㅂ',d:'ㅅ',g:'ㄱ',h:'',q:'ㄱ'};
+function pronWord(w0){
+  const w=w0.toLowerCase().replace(/[’']/g,'').replace(/[èê]/g,'é');
+  if(PRON_EX[w])return PRON_EX[w];
+  const tk=[];
+  for(let i=0;i<w.length;){
+    const two=w.slice(i,i+2);
+    if(['ng','ny','sy','kh'].includes(two)&&!(two==='ng'&&w[i+2]==='g'&&false)){tk.push({c:two});i+=2;continue}
+    const ch=w[i];
+    if('aiuoeé'.includes(ch))tk.push({v:ch});else if(/[a-z]/.test(ch))tk.push({c:ch});
+    i++;
+  }
+  const vi=tk.map((t,i)=>t.v?i:-1).filter(i=>i>=0);
+  if(!vi.length)return w0;
+  const syl=[];
+  for(let k=0;k<vi.length;k++){
+    const a=k===0?0:vi[k-1]+1,cl=tk.slice(a,vi[k]).map(t=>t.c);
+    let onset=[],coda=[];
+    if(k===0)onset=cl;
+    else{
+      let cut=cl.length-1;
+      if(cl.length>=2&&(cl[cl.length-1]==='y'||cl[cl.length-1]==='w')&&!['ng','r','l','h'].includes(cl[cl.length-2]))cut=cl.length-2;
+      if(cl.length===0)cut=0;
+      coda=cl.slice(0,Math.max(0,cut));onset=cl.slice(Math.max(0,cut));
+      syl[syl.length-1].coda=coda;
+    }
+    syl.push({onset,v:tk[vi[k]].v,coda:[]});
+  }
+  syl[syl.length-1].coda=tk.slice(vi[vi.length-1]+1).map(t=>t.c);
+  let out='';const parts=[];
+  syl.forEach((s,idx)=>{
+    let on=s.onset.slice(),glide='';
+    if(on.length&&(on[on.length-1]==='y'||on[on.length-1]==='w')){glide=on.pop()}
+    if(on.length&&(on[on.length-1]==='ny'||on[on.length-1]==='sy'))glide='y';
+    const pre=on.slice(0,-1),main=on[on.length-1];
+    for(const c of pre)parts.push({l:ON[c]||'ㅇ',v:'ㅡ',t:''});
+    let l=main?(ON[main]||'ㅇ'):'ㅇ';
+    if(main==='ng'){const p=parts[parts.length-1];if(p&&!p.t)p.t='ㅇ';else parts.push({l:'ㅇ',v:'ㅡ',t:'ㅇ'});l='ㅇ'}
+    if(main==='l'&&!pre.length&&idx>0){const p=parts[parts.length-1];if(p&&!p.t&&!p.sep)p.t='ㄹ'}
+    const vm=glide==='y'?VY:glide==='w'?VWW:VW;
+    parts.push({l,v:vm[s.v]||'ㅡ',t:''});
+    const cur=parts[parts.length-1];
+    s.coda.forEach((c,ci)=>{
+      if(ci===0&&c in CODA){cur.t=CODA[c];return}
+      if(c==='h')return;
+      const sep={r:'ㄹ',s:'ㅅ',c:'ㅉ',j:'ㅈ',z:'ㅈ',f:'ㅍ',v:'ㅍ',x:'ㅅ',kh:'ㅎ',sy:'ㅅ',ny:'ㄴ'}[c];
+      if(c==='y'){parts.push({l:'ㅇ',v:'ㅣ',t:'',sep:1});return}
+      if(c==='w'){parts.push({l:'ㅇ',v:'ㅜ',t:'',sep:1});return}
+      if(sep)parts.push({l:sep,v:'ㅡ',t:'',sep:1});
+      else{const m=CODA[c];if(m&&!cur.t)cur.t=m;else parts.push({l:ON[c]||'ㅇ',v:'ㅡ',t:'',sep:1})}
+    });
+  });
+  for(const p of parts)out+=hj(p.l,p.v,p.t);
+  return out;
+}
+function pronounce(text){return String(text||'').replace(/[A-Za-zÀ-ÿ’']+/g,w=>pronWord(w))}
+//#pron-end
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=t=>{t=Math.round(Math.max(0,+t||0)*10)/10;const m=Math.floor(t/60),s=(t-m*60).toFixed(1);return m+':'+(s.length<4?'0':'')+s};
+const PLAY='<path d="M7 4v16l13-8z"/>',PAUSE='<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>';
+const au=$('#au'),cv=$('#cv'),list=$('#list');
+const S={set:null,items:[],segs:[],spk:[],pr:[],filter:null,pk:null,hop:0.01,dur:0,cur:-1,playing:false,left:0,stopAt:0,timer:0,temp:false,resting:false,tts:false,tok:0,t0:0,newSpk:-1};
+const B={inbox:[],remote:false,session:'',me:null,login:'',name:'',admin:false,adminKey:'',canAdd:false,needCode:false,all:[],lib:[]};
+function setAll(arr){B.all=sortLib(arr);B.lib=B.all.filter(s=>!s.deletedAt)}
+const SY=window.speechSynthesis;let voices=[],raf=0;
+const show=(id,on)=>$(id).classList.toggle('hidden',!on);
+const pressed=id=>$(id).getAttribute('aria-pressed')==='true';
+function msg(t){$('#msg').textContent=t||''}
+function note(t){$('#note').textContent=t||'';show('#note',!!t)}
+function setPP(){$('#ppI').innerHTML=S.playing?PAUSE:PLAY;$('#pp').setAttribute('aria-label',S.playing?'멈춤':'재생')}
+const pref={get(k,d){try{const v=localStorage.getItem('naskah.'+k);return v==null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem('naskah.'+k,v)}catch(e){}}};
+const LANGS=[['id','인도네시아어','id-ID'],['ms','말레이어','ms-MY'],['en','영어','en-US'],['ja','일본어','ja-JP'],['zh','중국어','zh-CN'],['vi','베트남어','vi-VN'],['th','태국어','th-TH'],['tl','필리핀어','fil-PH'],['es','스페인어','es-ES'],['fr','프랑스어','fr-FR'],['de','독일어','de-DE'],['it','이탈리아어','it-IT'],['pt','포르투갈어','pt-BR'],['ru','러시아어','ru-RU'],['ar','아랍어','ar-SA'],['hi','힌디어','hi-IN'],['tr','튀르키예어','tr-TR'],['ko','한국어','ko-KR']];
+const LMAP=Object.fromEntries(LANGS.map(l=>[l[0],l]));
+const langName=c=>(LMAP[c||'id']||[0,c])[1];
+const langTts=c=>(LMAP[c||'id']||[0,0,c||'id-ID'])[2];
+const AUTO_PR=['id','ms'];
+const VIS_NAME={public:'전체 공개',partial:'일부 공개',private:'비공개'};
+const canModify=set=>!!set&&(B.admin||(!!B.me&&set.uid===B.me));
+const whoOf=s=>!B.remote?'':s.uid&&s.uid===B.me?'<span class="mine">내 세트</span>'+(s.visibility==='private'?' · 비공개':s.visibility==='partial'?` · 일부 공개 ${s.shareCount||0}명`:'')+' · ':(s.sharedWithMe?'공유받음 · ':'')+(s.author?esc(s.author)+' · ':'');
+
+/* ---------- local fallback storage (this browser only) ---------- */
+function idb(){return new Promise((res,rej)=>{try{const r=indexedDB.open('naskah',2);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('kv'))r.result.createObjectStore('kv')};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})}
+async function lget(){try{const db=await idb();return await new Promise(res=>{const r=db.transaction('kv').objectStore('kv').get('lib');r.onsuccess=()=>res(r.result||[]);r.onerror=()=>res([])})}catch(e){return[]}}
+async function lput(arr){try{const db=await idb();db.transaction('kv','readwrite').objectStore('kv').put(arr,'lib')}catch(e){}}
+const sortLib=a=>a.sort((x,y)=>(y.updatedAt||0)-(x.updatedAt||0));
+async function reloadLocal(){const a=await lget();setAll(a.map(x=>Object.assign({uid:'local'},x)));libCb&&libCb()}
+
+/* ---------- backend (Supabase) ---------- */
+const CONFIG=window.NASKAH_CONFIG||{};
+let sb=null,libCb=null,loading=false;
+const hex=a=>[...new Uint8Array(a)].map(x=>x.toString(16).padStart(2,'0')).join('');
+async function sha(t){return hex(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t)))}
+const adminArg=()=>B.admin&&B.adminKey?B.adminKey:null;
+const isAuthErr=e=>!!e&&/\bauth\b/.test(String(e.message||''));
+function rowToSet(r){return{id:r.id,uid:r.owner_id||null,title:r.title,script:r.script,mode:r.mode,fmt:r.fmt,tts:r.tts,segs:r.segs,spk:r.spk,pr:r.pr,dur:r.dur,name:r.name,
+  audio:r.audio_path?{path:r.audio_path,mime:r.audio_mime}:null,author:r.author_name||r.author||'',lang:r.lang||'id',visibility:r.visibility||'public',sharedWithMe:!!r.shared_with_me,shareCount:r.share_count,createdAt:Date.parse(r.created_at),updatedAt:Date.parse(r.updated_at),deletedAt:r.deleted_at?Date.parse(r.deleted_at):null}}
+async function load(){
+  if(!B.remote){await reloadLocal();return}
+  if(loading)return;loading=true;
+  try{
+    const {data,error}=await sb.rpc('list_sets',{p_token:B.session||null});
+    if(error){if(isAuthErr(error)){loading=false;logout(true);return}throw error}
+    setAll(data.map(rowToSet));if($('#note').textContent.startsWith('목록을'))note('');libCb&&libCb();
+    loadInbox();
+  }catch(e){note('목록을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.')}
+  loading=false;
+}
+function listen(cb){
+  libCb=cb;load();
+  if(B.remote){setInterval(()=>{if(!document.hidden&&!S.playing)load()},30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()})}
+}
+const EXT={'audio/mpeg':'mp3','audio/mp3':'mp3','audio/mp4':'m4a','audio/x-m4a':'m4a','audio/m4a':'m4a','audio/aac':'aac','audio/wav':'wav','audio/x-wav':'wav','audio/wave':'wav','audio/ogg':'ogg','audio/webm':'webm','video/mp4':'mp4','video/webm':'webm','audio/flac':'flac'};
+const MIME={mp3:'audio/mpeg',m4a:'audio/mp4',aac:'audio/aac',wav:'audio/wav',ogg:'audio/ogg',oga:'audio/ogg',opus:'audio/ogg',webm:'audio/webm',mp4:'video/mp4',flac:'audio/flac'};
+async function uploadAudio(blob){
+  const nm=(blob.name||'').toLowerCase(),m=nm.match(/\.([a-z0-9]{2,5})$/);
+  let ext=m?m[1]:(EXT[(blob.type||'').toLowerCase()]||'mp3');
+  const type=MIME[ext]||(blob.type&&/^(audio|video)\//.test(blob.type)?blob.type:'audio/mpeg');
+  if(blob.size>20*1024*1024)throw{code:'too_large'};
+  const path=(crypto.randomUUID?crypto.randomUUID():hex(crypto.getRandomValues(new Uint8Array(16))))+'.'+ext;
+  const {error}=await sb.storage.from('audio').upload(path,blob,{contentType:type,upsert:false});
+  if(error){const t=String(error.message||error.error||'');throw{code:/size|large|413/i.test(t)?'too_large':/mime|type/i.test(t)?'unsupported_type':'upload'}}
+  return{path,mime:type};
+}
+async function addSet(data,blob){
+  const now=Date.now();data.updatedAt=now;data.createdAt=data.createdAt||now;
+  if(!B.remote){const id='l'+now.toString(36)+Math.random().toString(36).slice(2,6);const arr=await lget();arr.push(Object.assign({id,blob:blob||null},data));await lput(arr);await reloadLocal();return B.all.find(x=>x.id===id)||Object.assign({id,uid:'local',blob},data)}
+  const p=Object.assign({},data,{created_ms:data.createdAt});delete p.createdAt;delete p.updatedAt;delete p.audio;
+  if(data.audio&&data.audio.path){p.audio_path=data.audio.path;p.audio_mime=data.audio.mime||''}
+  if(blob){msg('음성 파일을 올리는 중…');const a=await uploadAudio(blob);p.audio_path=a.path;p.audio_mime=a.mime}
+  const {data:id,error}=await sb.rpc('create_set',{p,p_token:B.session});
+  if(error){const t=String(error.message||'');if(isAuthErr(error)){logout(true);throw{code:'auth'}}throw{code:/full/.test(t)?'quota_exceeded':/too_big|bad_script/.test(t)?'too_big':'save'}}
+  await load();
+  return B.all.find(x=>x.id===id)||Object.assign({},data,{id,uid:B.me,audio:p.audio_path?{path:p.audio_path,mime:p.audio_mime}:null});
+}
+const busy={};
+async function patchSet(set,patch){
+  if(!B.remote){const arr=await lget();const x=arr.find(a=>a.id===set.id);if(x){Object.assign(x,patch);await lput(arr)}if('deletedAt' in patch)await reloadLocal();return}
+  const key=set.id;if(busy[key]){busy[key].next=Object.assign(busy[key].next||{},patch);return}
+  busy[key]={};
+  const p=Object.assign({},patch);if('deletedAt' in p){p.deleted=!!p.deletedAt;delete p.deletedAt}
+  const {error}=await sb.rpc('update_set',{p_id:set.id,p_token:B.session,p,p_admin:adminArg()});
+  if(error){if(isAuthErr(error))logout(true);else note('변경 내용을 저장하지 못했어요. 이 세트를 올린 사람이나 관리자만 고칠 수 있어요.')}
+  const nx=busy[key].next;delete busy[key];
+  if('deleted' in p)await load();
+  if(nx)patchSet(set,nx);
+}
+async function purgeSet(set){
+  if(!B.remote){const arr=(await lget()).filter(a=>a.id!==set.id);await lput(arr);await reloadLocal();return}
+  const {error}=await sb.rpc('purge_set',{p_id:set.id,p_token:B.session,p_admin:adminArg()});
+  if(error)throw error;
+  if(set.audio&&set.audio.path&&!B.all.some(x=>x.id!==set.id&&x.audio&&x.audio.path===set.audio.path))try{await sb.storage.from('audio').remove([set.audio.path])}catch(e){}
+  await load();
+}
+let segT=0,spkT=0;
+const saveSegs=()=>{clearTimeout(segT);segT=setTimeout(()=>S.set&&patchSet(S.set,{segs:S.segs.map(g=>({s:g.s,e:g.e}))}),700)};
+const saveSpk=()=>{clearTimeout(spkT);spkT=setTimeout(()=>S.set&&patchSet(S.set,{spk:S.spk.slice()}),500)};
+function b64(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]||'');r.onerror=()=>rej(r.error);r.readAsDataURL(blob)})}
+async function getAudio(set){
+  if(!B.remote)return set.blob||null;
+  if(!set.audio||!set.audio.path)return null;
+  const url=sb.storage.from('audio').getPublicUrl(set.audio.path).data.publicUrl;
+  const r=await fetch(url);if(!r.ok)throw new Error('missing');
+  const b=await r.blob();return new Blob([b],{type:set.audio.mime||b.type||'audio/mpeg'});
+}
+function saveFile(name,blob){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000)}
+
+/* ---------- library view ---------- */
+function renderLib(){
+  show('#addBtn',B.canAdd||B.remote);
+  const tn=B.all.filter(s=>s.deletedAt&&canModify(s)).length;show('#trBtn',tn>0);$('#trBtn').textContent='휴지통 '+tn;
+  if(!$('#trash').classList.contains('hidden'))renderTrash();
+  const el=$('#sets');
+  if(!B.lib.length){el.innerHTML=`<li class="empty-l">${B.canAdd?'아직 대본이 없어요. ‘새 대본 추가’로 첫 세트를 만들어 보세요.':'아직 등록된 대본이 없어요. 추가 권한이 있는 사람이 올리면 여기에 나타나요.'}</li>`;return}
+  const langs={};for(const s of B.lib){const k=s.lang||'id';langs[k]=(langs[k]||0)+1}
+  const codes=Object.keys(langs);let lf=pref.get('langf','');if(lf&&!langs[lf])lf='';
+  show('#langBar',codes.length>1);
+  $('#langBar').innerHTML=`<button class="sc" data-l="" aria-pressed="${!lf}">전체<small>${B.lib.length}</small></button>`+codes.map(c=>`<button class="sc" data-l="${esc(c)}" aria-pressed="${lf===c}">${esc(langName(c))}<small>${langs[c]}</small></button>`).join('');
+  const shown=lf?B.lib.filter(s=>(s.lang||'id')===lf):B.lib;
+  el.innerHTML=shown.map(s=>{const its=parseScript(s.script,s.mode||'auto');const sp=new Set((s.spk&&s.spk.length===its.length?s.spk:its.map(i=>i.sp)).filter(Boolean));
+    const who=whoOf(s);
+    return `<li><button class="set" data-id="${esc(s.id)}"><span><b>${esc(s.title||'제목 없음')}</b><small><span class="lt">${esc(langName(s.lang))}</span>${who}${its.length}개 멘트${sp.size?' · 화자 '+sp.size+'명':''} · ${s.tts?'기계 음성':'녹음 '+fmt(s.dur)}</small></span><span class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">${PLAY}</svg></span></button></li>`}).join('');
+}
+$('#langBar').addEventListener('click',e=>{const b=e.target.closest('.sc');if(!b)return;pref.set('langf',b.dataset.l||'');renderLib()});
+$('#sets').addEventListener('click',e=>{const b=e.target.closest('.set');if(!b)return;const s=B.lib.find(x=>x.id===b.dataset.id);if(s)openSet(s)});
+function goLib(){stop();S.set=null;S.cur=-1;show('#practice',false);show('#setup',false);show('#bk',false);show('#trash',false);show('#me',false);show('#auth',false);show('#lib',true);show('#bar',false);
+  S.pk=null;$('#wave').style.height='';show('#wEmpty',true);$('#wEmpty').textContent='세트를 열면 여기에 파형과 멘트 구간이 표시됩니다';cv.classList.add('hidden');renderLib()}
+
+/* ---------- open a set ---------- */
+async function decode(blob){
+  const ab=await blob.arrayBuffer();
+  const AC=window.AudioContext||window.webkitAudioContext;const ctx=new AC();
+  try{
+    const buf=await new Promise((res,rej)=>{const p=ctx.decodeAudioData(ab,res,rej);if(p&&p.then)p.then(res,rej)});
+    const chs=[];for(let c=0;c<Math.min(2,buf.numberOfChannels);c++)chs.push(buf.getChannelData(c));
+    return{an:analyze(chs,buf.sampleRate),dur:buf.duration};
+  }finally{try{ctx.close()}catch(e){}}
+}
+function setAudio(blob){try{if(au.src&&au.src.startsWith('blob:'))URL.revokeObjectURL(au.src)}catch(e){}if(blob){au.src=URL.createObjectURL(blob);au.load()}else au.removeAttribute('src')}
+let openTok=0;
+async function openSet(set){
+  const my=++openTok;stop();
+  S.set=set;S.lang=set.lang||'id';S.tts=!!set.tts;S.items=parseScript(set.script,set.mode||'auto',set.fmt===2?'pk':'kp');S.cur=-1;S.pk=null;S.dur=set.dur||0;S.filter=null;S.newSpk=-1;
+  S.segs=(set.segs&&set.segs.length===S.items.length)?set.segs.map(g=>({s:+g.s,e:+g.e})):S.items.map(()=>({s:0,e:0}));
+  S.spk=(set.spk&&set.spk.length===S.items.length)?set.spk.map(x=>String(x||'')):S.items.map(i=>i.sp||'');
+  S.pr=(set.pr&&set.pr.length===S.items.length)?set.pr.map(x=>String(x||'')):S.items.map(()=>'');
+  pref.set('last',set.id);
+  show('#lib',false);show('#setup',false);show('#practice',true);show('#bar',true);show('#delBox',canModify(set));show('#delBtn',true);
+  const own=B.remote&&set.uid===B.me;show('#shareBox',own);show('#sharePanel',false);show('#leaveBox',B.remote&&set.sharedWithMe&&!own);$('#shareInfo').textContent=own?shareInfo(set):'';
+  setupView();scrollTo(0,0);
+  if(S.tts){setAudio(null);return}
+  $('#wEmpty').textContent='음성을 불러오는 중…';show('#wEmpty',true);cv.classList.add('hidden');
+  try{
+    const blob=await getAudio(set);if(my!==openTok)return;
+    if(!blob)throw new Error('none');
+    const {an,dur}=await decode(blob);if(my!==openTok)return;
+    S.pk=an.pk;S.hop=an.hop;S.dur=dur;
+    if(!(set.segs&&set.segs.length===S.items.length))S.segs=segment(an,S.items.map(i=>i.w));
+    setAudio(blob);show('#wEmpty',false);cv.classList.remove('hidden');
+    $('#sumS').textContent=langName(S.lang)+' · '+S.items.length+'개 멘트 · 녹음 '+fmt(S.dur);render();draw();
+  }catch(e){if(my!==openTok)return;$('#wEmpty').textContent='음성 파일을 불러오지 못했어요. 새로고침해 보거나, 올린 사람에게 다시 추가를 부탁해 주세요.'}
+}
+function setupView(){
+  const hasKo=S.items.some(i=>i.ko);show('#hideKo',hasKo);
+  $('#sumT').textContent=S.set.title||(S.items.length+'개 멘트');
+  $('#sumS').textContent=langName(S.lang)+' · '+S.items.length+'개 멘트 · '+(S.tts?'기계 음성':'녹음 '+fmt(S.dur));
+  const mod=canModify(S.set);
+  show('#voiceL',S.tts);show('#edit',!S.tts&&mod);show('#spkEdit',mod);show('#prEdit',mod);
+  if(pressed('#prEdit')&&!mod)$('#prEdit').click();
+  if(pressed('#edit')&&(S.tts||!mod))$('#edit').click();
+  if(pressed('#spkEdit')&&!mod)$('#spkEdit').click();
+  $('#wave').style.height=S.tts?'64px':'';
+  if(S.tts){$('#wEmpty').textContent='기계 음성 세트라 파형이 없어요. 아래 멘트를 눌러 들어 보세요.';show('#wEmpty',true);cv.classList.add('hidden')}
+  loadVoices();render();mark();
+}
+
+const autoPr=i=>S.items[i].pr||(AUTO_PR.includes(S.lang)?pronounce(S.items[i].t):'');
+const prOf=i=>S.pr[i]||autoPr(i);
+let prT=0;const savePr=()=>{clearTimeout(prT);prT=setTimeout(()=>S.set&&patchSet(S.set,{pr:S.pr.slice()}),500)};
+/* ---------- speakers ---------- */
+function speakers(){const o=[];for(const s of S.spk)if(s&&!o.includes(s))o.push(s);return o}
+const colorOf=name=>{const i=speakers().indexOf(name);return i<0?'':`--c:var(--s${i%8})`};
+const visible=i=>!S.filter||S.spk[i]===S.filter;
+function nextVis(i,dir){for(let k=i+dir;k>=0&&k<S.items.length;k+=dir)if(visible(k))return k;return -1}
+function firstVis(){return visible(0)?0:nextVis(0,1)}
+function renderSpkBar(){
+  const sp=speakers();
+  if(S.filter&&!sp.includes(S.filter))S.filter=null;
+  show('#spkBar',sp.length>0);
+  const cnt=n=>S.spk.filter(x=>x===n).length;
+  $('#spkBar').innerHTML=`<button class="sc" data-f="" aria-pressed="${!S.filter}">전체<small>${S.items.length}</small></button>`+
+    sp.map((n,i)=>`<button class="sc" data-f="${esc(n)}" style="--c:var(--s${i%8})" aria-pressed="${S.filter===n}">${esc(n)}<small>${cnt(n)}</small></button>`).join('');
+}
+$('#spkBar').addEventListener('click',e=>{const b=e.target.closest('.sc');if(!b)return;S.filter=b.dataset.f||null;
+  if(S.playing&&!visible(S.cur))stop();render();mark();draw()});
+
+/* ---------- add form ---------- */
+let pickBlob=null;
+function openForm(){stop();$('#lang').value=pref.get('lastLang','id');if(!$('#lang').value)$('#lang').value='id';show('#fVisWrap',B.remote);if(B.remote)fPick.set(pref.get('lastVis','public'),[]);show('#lib',false);show('#practice',false);show('#bar',false);show('#setup',true);msg('');
+  $('#title').focus()}
+function formItems(){const items=parseScript($('#script').value,$('#mode').value);if(!items.length){msg('대본을 먼저 넣어 주세요.');return null}return items}
+function title(){return $('#title').value.trim()||(parseScript($('#script').value,'line')[0]||{t:'새 대본'}).t.slice(0,40)}
+async function saveForm(tts){
+  const items=formItems();if(!items)return;
+  if(!tts&&!pickBlob){msg('대본 전체를 녹음한 음성 파일을 선택하거나, ‘기계 음성으로 저장’을 눌러 주세요.');return}
+  if(tts&&!SY){msg('이 브라우저는 기계 음성을 지원하지 않아요.');return}
+  $('#go').disabled=$('#ttsGo').disabled=true;
+  try{
+    const data={fmt:2,title:title(),script:$('#script').value,mode:$('#mode').value,tts:!!tts,spk:items.map(i=>i.sp||''),lang:$('#lang').value||'id'};
+    pref.set('lastLang',data.lang);
+    if(B.remote){const v=fPick.get();if(v.vis==='partial'&&!v.users.length){msg('일부 공개는 공유할 사람을 한 명 이상 추가해 주세요.');$('#go').disabled=$('#ttsGo').disabled=false;return}
+      data.visibility=v.vis;if(v.vis==='partial')data.share=v.users.map(x=>x.id);pref.set('lastVis',v.vis)}
+    if(!tts){
+      msg('음성을 분석하는 중… (긴 파일은 몇 초 걸려요)');await new Promise(r=>setTimeout(r,30));
+      let an,dur;try{({an,dur}=await decode(pickBlob))}catch(e){throw{code:'decode'}}
+      data.segs=segment(an,items.map(i=>i.w));data.dur=+dur.toFixed(2);data.name=pickBlob.name||'';
+    }
+    const set=await addSet(data,tts?null:pickBlob);
+    msg('');$('#title').value='';$('#script').value='';pickBlob=null;$('#fname').textContent='선택된 파일 없음';$('#audIn').value='';
+    openSet(set);
+  }catch(e){
+    const c=e&&e.code;
+    msg(c==='decode'?'이 음성 파일을 읽지 못했어요. mp3나 m4a로 다시 시도해 주세요.':c==='too_large'?'음성 파일이 너무 커요. 약 15MB 이하의 mp3·m4a로 줄여 주세요.':c==='doc_full'?'내 세트 저장 공간이 가득 찼어요. 쓰지 않는 내 세트를 삭제해 주세요.':c==='quota_or_state'||c==='quota_exceeded'?'저장 공간이 가득 찼어요. 쓰지 않는 세트를 삭제해 주세요.':c==='unsupported_type'?'이 형식의 음성 파일은 올릴 수 없어요. mp3나 m4a로 바꿔 주세요.':c==='auth'?'로그인이 만료됐어요. 다시 로그인한 뒤 올려 주세요.':c==='too_big'?'대본이 너무 길어요. 나눠서 올려 주세요.':c==='upload'?'음성 파일을 올리지 못했어요. 연결을 확인하고 다시 시도해 주세요.':'저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.');
+  }
+  $('#go').disabled=$('#ttsGo').disabled=false;
+}
+
+/* ---------- list render ---------- */
+function render(){
+  renderSpkBar();
+  const sp=speakers();
+  list.innerHTML=S.items.map((it,i)=>{const g=S.segs[i]||{s:0,e:0},who=S.spk[i];
+    const chips=sp.map((n,k)=>`<button data-act="sp" data-v="${esc(n)}" style="--c:var(--s${k%8})" aria-pressed="${who===n}">${esc(n)}</button>`).join('')+
+      `<button data-act="sp" data-v="" aria-pressed="${!who}">없음</button>`+
+      (S.newSpk===i?`<input data-act="spin" placeholder="화자 이름" maxlength="24" aria-label="새 화자 이름"><button data-act="spok">추가</button>`:`<button data-act="spnew">+ 새 화자</button>`);
+    return `<li class="ln${i===S.cur?' on':''}${visible(i)?'':' off'}" data-i="${i}">
+<span class="no">${i+1}</span>
+<div>${who?`<span class="pill" style="${colorOf(who)}">${esc(who)}</span>`:''}<div class="tx">${esc(it.t)}</div><div class="pr">${esc(prOf(i))}</div>${it.ko?`<div class="ko">${esc(it.ko)}</div>`:''}${S.tts?'':`<div class="tm">${fmt(g.s)} – ${fmt(g.e)} · ${(g.e-g.s).toFixed(1)}초</div>`}</div>
+<button class="pl" data-act="play" aria-label="${i+1}번 멘트 듣기"><svg viewBox="0 0 24 24" fill="currentColor">${S.playing&&i===S.cur?PAUSE:PLAY}</svg></button>
+<div class="ed"><span>시작 <button data-act="s-">−</button><button data-act="s+">+</button></span><span>끝 <button data-act="e-">−</button><button data-act="e+">+</button></span></div>
+<div class="spe">${chips}</div>
+<div class="pre"><input data-act="pr" data-i="${i}" value="${esc(prOf(i))}" aria-label="${i+1}번 멘트 한글 발음"></div>
+</li>`}).join('');
+  const inp=list.querySelector('input[data-act="spin"]');if(inp)inp.focus();
+}
+function mark(){
+  for(const li of list.children){const i=+li.dataset.i,on=i===S.cur;li.classList.toggle('on',on);
+    const b=li.querySelector('.pl svg');if(b)b.innerHTML=on&&S.playing?PAUSE:PLAY;
+    const g=S.segs[i],tm=li.querySelector('.tm');if(tm)tm.textContent=`${fmt(g.s)} – ${fmt(g.e)} · ${(g.e-g.s).toFixed(1)}초`}
+  const it=S.items[S.cur];
+  $('#nowT').textContent=it?(S.cur+1)+'. '+(S.spk[S.cur]?S.spk[S.cur]+': ':'')+it.t:'멘트를 눌러 들어 보세요';
+  const rep=+$('#rep').value;
+  $('#nowS').textContent=it?(S.resting?'따라 말해 보세요…':(rep===1?'':'반복 '+(rep===0?'계속':(rep-S.left+1)+' / '+rep))):(S.filter?S.filter+'의 멘트만 보는 중':'');
+  setPP();
+}
+
+/* ---------- playback ---------- */
+function loadVoices(){
+  if(!SY)return;const pre=langTts(S.lang).split('-')[0].toLowerCase();
+  voices=SY.getVoices().filter(v=>{const p=String(v.lang||'').replace('_','-').toLowerCase().split('-')[0];return p===pre||(pre==='fil'&&p==='tl')});
+  const sel=$('#voice'),keep=pref.get('voice.'+(S.lang||'id'),'');
+  sel.innerHTML=voices.length?voices.map((v,i)=>`<option value="${i}">${esc(v.name.replace(/\s*\(.*\)/,''))}</option>`).join(''):'<option value="">기본 음성</option>';
+  if(keep&&voices[+keep])sel.value=keep;
+}
+if(SY){loadVoices();try{SY.addEventListener('voiceschanged',loadVoices)}catch(e){SY.onvoiceschanged=loadVoices}}
+function stop(){S.tok++;if(SY)try{SY.cancel()}catch(e){}clearTimeout(S.timer);cancelAnimationFrame(raf);try{au.pause()}catch(e){}S.playing=false;S.resting=false;S.temp=false}
+function startSeg(s,e){
+  if(!au.getAttribute('src'))return;
+  S.stopAt=e;S.resting=false;S.t0=performance.now();
+  au.playbackRate=+$('#speed').value;
+  try{au.preservesPitch=true;au.webkitPreservesPitch=true}catch(x){}
+  const go=()=>{try{au.currentTime=s}catch(x){}const p=au.play();if(p&&p.catch)p.catch(()=>{stop();mark()});S.playing=true;mark();tick()};
+  if(au.readyState>=1)go();else au.addEventListener('loadedmetadata',go,{once:true});
+}
+function speak(){
+  const it=S.items[S.cur];if(!it||!SY)return;
+  try{SY.cancel()}catch(e){}
+  const tok=++S.tok,txt=it.t.replace(/[\[(（][^\])）]*[\])）]/g,' ').trim();
+  const ut=new SpeechSynthesisUtterance(txt||it.t);ut.lang=langTts(S.lang);
+  const v=voices[+$('#voice').value];if(v)ut.voice=v;
+  ut.rate=+$('#speed').value;
+  const done=()=>{if(tok===S.tok&&S.playing&&!S.resting)segEnd()};
+  ut.onend=done;ut.onerror=e=>{if(e&&e.error==='not-allowed'){stop();mark();$('#nowS').textContent='재생 버튼을 한 번 더 눌러 주세요';return}done()};
+  S.resting=false;S.t0=performance.now();S.playing=true;mark();
+  SY.speak(ut);
+}
+function playCur(){if(S.tts){speak();return}const n=S.segs[S.cur];startSeg(n.s,n.e)}
+function tick(){cancelAnimationFrame(raf);const f=()=>{if(!S.playing)return;if(au.currentTime>=S.stopAt-0.01){segEnd();return}draw();raf=requestAnimationFrame(f)};raf=requestAnimationFrame(f)}
+au.addEventListener('timeupdate',()=>{if(!S.tts&&S.playing&&!S.resting&&au.currentTime>=S.stopAt-0.01)segEnd()});
+au.addEventListener('ended',()=>{if(!S.tts&&S.playing&&!S.resting)segEnd()});
+function segEnd(){
+  if(S.resting)return;
+  cancelAnimationFrame(raf);if(!S.tts)au.pause();
+  if(S.temp){S.playing=false;S.temp=false;mark();draw();return}
+  const real=Math.max(0.5,(performance.now()-S.t0)/1000),rest=500+(+$('#gap').value)*real*1000;
+  const rep=+$('#rep').value;S.left--;
+  let next=null;
+  if(rep===0||S.left>0)next=S.cur;
+  else if(pressed('#cont')){const k=nextVis(S.cur,1);if(k>=0)next=k}
+  if(next===null){S.playing=false;mark();draw();return}
+  S.resting=true;mark();draw();
+  S.timer=setTimeout(()=>{if(!S.playing)return;if(next!==S.cur){S.cur=next;S.left=rep||1;reveal(S.cur)}playCur()},rest);
+}
+const ready=()=>S.items.length&&(S.tts||S.pk);
+function playLine(i){if(i<0)return;stop();S.cur=i;const rep=+$('#rep').value;S.left=rep||1;playCur()}
+function playRange(i,s,e){stop();S.cur=i;S.temp=true;startSeg(s,e)}
+function reveal(i){const li=list.children[i];if(li){const r=li.getBoundingClientRect();if(r.top<0||r.bottom>innerHeight-90)li.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}}
+
+/* ---------- waveform ---------- */
+function draw(){
+  const W=cv.clientWidth,H=cv.clientHeight;if(!W||!S.pk)return;
+  const dpr=Math.min(2,devicePixelRatio||1);if(cv.width!==Math.round(W*dpr)){cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr)}
+  const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);
+  const dur=S.dur||S.pk.length*S.hop,X=t=>t/dur*W;
+  S.segs.forEach((g,i)=>{c.fillStyle=i===S.cur?'rgba(255,255,255,.28)':!visible(i)?'rgba(0,0,0,.12)':(i%2?'rgba(255,255,255,.07)':'rgba(255,255,255,.13)');c.fillRect(X(g.s),0,Math.max(1,X(g.e)-X(g.s)),H)});
+  const n=S.pk.length;let mx=0.0001;for(let f=0;f<n;f++)if(S.pk[f]>mx)mx=S.pk[f];
+  const bw=2,mid=H/2,cg=S.segs[S.cur];c.fillStyle='#fff';
+  const vis=S.filter?S.segs.filter((g,i)=>visible(i)):null;
+  for(let x=0;x<W;x+=bw+1){const a=Math.floor(x/W*n),b=Math.max(a+1,Math.floor((x+bw)/W*n));let p=0;for(let f=a;f<b&&f<n;f++)if(S.pk[f]>p)p=S.pk[f];
+    const t=x/W*dur;let al=cg&&t>=cg.s&&t<=cg.e?1:.62;if(vis&&al<1&&!vis.some(g=>t>=g.s&&t<=g.e))al=.25;
+    c.globalAlpha=al;const h=Math.max(1,Math.sqrt(p/mx)*(H*0.42));c.fillRect(x,mid-h,bw,h*2)}
+  c.globalAlpha=1;
+  if(W>360){c.font='600 11px "Plus Jakarta Sans",sans-serif';c.fillStyle='rgba(255,255,255,.9)';let lastX=-99;
+    S.segs.forEach((g,i)=>{if(!visible(i))return;const x=X(g.s)+3;if(x-lastX>22){c.fillText(String(i+1),x,13);lastX=x}})}
+  if(S.playing&&!S.resting&&!S.tts){const x=X(au.currentTime);c.fillStyle='#fff';c.fillRect(x-1,0,2,H)}
+}
+const ro=new ResizeObserver(draw);ro.observe(cv);
+cv.addEventListener('click',ev=>{if(!S.pk||!S.segs.length)return;const r=cv.getBoundingClientRect(),t=(ev.clientX-r.left)/r.width*S.dur;
+  let best=-1,bd=1e9;S.segs.forEach((g,i)=>{if(!visible(i))return;const d=t<g.s?g.s-t:t>g.e?t-g.e:0;if(d<bd){bd=d;best=i}});if(best>=0){playLine(best);reveal(best)}});
+
+/* ---------- events ---------- */
+function addSpeaker(i){const inp=list.querySelector('input[data-act="spin"]');const v=(inp&&inp.value||'').trim().slice(0,24);S.newSpk=-1;if(v){S.spk[i]=v;saveSpk()}render();mark();draw()}
+list.addEventListener('change',e=>{const t=e.target;if(t.dataset.act!=='pr')return;const i=+t.dataset.i,v=t.value.trim();S.pr[i]=v===autoPr(i)?'':v;const d=list.children[i]&&list.children[i].querySelector('.pr');if(d)d.textContent=prOf(i);if(!v)t.value=autoPr(i);savePr()});
+list.addEventListener('keydown',e=>{if(e.target.dataset.act==='pr'&&e.key==='Enter'){e.preventDefault();e.target.blur()}});
+list.addEventListener('keydown',e=>{if(e.target.dataset.act==='spin'){if(e.key==='Enter'){e.preventDefault();addSpeaker(+e.target.closest('.ln').dataset.i)}else if(e.key==='Escape'){S.newSpk=-1;render();mark()}}});
+list.addEventListener('click',ev=>{
+  const li=ev.target.closest('.ln');if(!li)return;const i=+li.dataset.i,b=ev.target.closest('button,input'),act=b&&b.dataset.act;
+  if(act==='spin'||act==='pr')return;
+  if(act==='sp'){S.spk[i]=b.dataset.v;S.newSpk=-1;saveSpk();render();mark();draw();return}
+  if(act==='spnew'){S.newSpk=i;render();mark();return}
+  if(act==='spok'){addSpeaker(i);return}
+  if(act&&act!=='play'){
+    if(!S.pk)return;
+    const st=+$('#step').value,g=S.segs[i],prev=S.segs[i-1],nx=S.segs[i+1];
+    if(act==='s-')g.s=Math.max(prev?prev.s+0.2:0,g.s-st);
+    if(act==='s+')g.s=Math.min(g.e-0.2,g.s+st);
+    if(act==='e-')g.e=Math.max(g.s+0.2,g.e-st);
+    if(act==='e+')g.e=Math.min(nx?nx.e-0.2:S.dur,g.e+st);
+    g.s=+g.s.toFixed(3);g.e=+g.e.toFixed(3);
+    act[0]==='s'?playRange(i,g.s,Math.min(g.e,g.s+1.6)):playRange(i,Math.max(g.s,g.e-1.6),g.e);
+    saveSegs();return;
+  }
+  if(ev.target.closest('.spe,.ed,.pre'))return;
+  if(document.body.classList.contains('hid')&&ev.target.closest('.tx')){li.classList.toggle('peek');return}
+  if(i===S.cur&&S.playing){stop();mark();draw();return}
+  if(!ready())return;
+  playLine(i);
+});
+$('#pp').onclick=()=>{if(S.playing){stop();mark();draw()}else if(ready())playLine(S.cur>=0&&visible(S.cur)?S.cur:firstVis())};
+$('#prev').onclick=()=>{if(!ready())return;const k=S.cur<0?firstVis():nextVis(S.cur,-1);if(k>=0){playLine(k);reveal(k)}};
+$('#next').onclick=()=>{if(!ready())return;const k=S.cur<0?firstVis():nextVis(S.cur,1);if(k>=0){playLine(k);reveal(k)}};
+const tog=(id,fn)=>$(id).addEventListener('click',()=>{const b=$(id),on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',on);fn(on)});
+tog('#cont',on=>pref.set('cont',on?'1':'0'));
+tog('#hideId',on=>{document.body.classList.toggle('hid',on);for(const li of list.children)li.classList.remove('peek')});
+tog('#hideKo',on=>document.body.classList.toggle('hko',on));
+tog('#showPr',on=>{document.body.classList.toggle('hpr',!on);pref.set('pr',on?'1':'0')});
+tog('#prEdit',on=>{document.body.classList.toggle('pred',on);show('#prHint',on)});
+if(pref.get('pr','1')==='0'){$('#showPr').setAttribute('aria-pressed','false');document.body.classList.add('hpr')}
+tog('#edit',on=>{document.body.classList.toggle('edit',on);show('#editHint',on)});
+tog('#spkEdit',on=>{document.body.classList.toggle('spk',on);show('#spkHint',on);S.newSpk=-1;if(!on)render()});
+for(const k of ['speed','rep','gap']){const el=$('#'+k),v=pref.get(k,null);if(v&&[...el.options].some(o=>o.value===v))el.value=v;el.addEventListener('change',()=>pref.set(k,el.value))}
+if(pref.get('cont','1')==='0')$('#cont').setAttribute('aria-pressed','false');
+$('#speed').addEventListener('change',()=>{au.playbackRate=+$('#speed').value;if(S.playing&&S.tts&&!S.resting)speak()});
+$('#voice').onchange=()=>{pref.set('voice.'+(S.lang||'id'),$('#voice').value);if(S.playing&&S.tts)speak()};
+$('#go').onclick=()=>saveForm(false);
+$('#ttsGo').onclick=()=>saveForm(true);
+$('#addBtn').onclick=()=>{if(B.remote&&!B.session){showAuth('대본을 추가하려면 로그인해 주세요. 처음이면 회원가입을 눌러 주세요.','add');return}openForm()};
+$('#cancel').onclick=goLib;
+$('#backBtn').onclick=goLib;
+$('#delBtn').onclick=async()=>{const s=S.set;if(!s)return;$('#delBtn').disabled=true;
+  try{await patchSet(s,{deletedAt:Date.now()});goLib();note('휴지통으로 옮겼어요: ‘'+(s.title||'제목 없음')+'’. 목록의 휴지통에서 되살릴 수 있어요.')}catch(e){note('휴지통으로 옮기지 못했어요.')}
+  $('#delBtn').disabled=false};
+$('#audIn').onchange=e=>{const f=e.target.files[0];if(f){pickBlob=f;$('#fname').textContent=f.name;msg('')}};
+$('#txtIn').onchange=async e=>{const f=e.target.files[0];if(f){$('#script').value=await f.text();msg('')}};
+document.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||$('#practice').classList.contains('hidden'))return;
+  if(e.key===' '){e.preventDefault();$('#pp').click()}else if(e.key==='ArrowDown'||e.key==='ArrowRight'){e.preventDefault();$('#next').click()}else if(e.key==='ArrowUp'||e.key==='ArrowLeft'){e.preventDefault();$('#prev').click()}});
+
+/* ---------- trash ---------- */
+let askPurge='';
+function renderTrash(){
+  const t=B.all.filter(s=>s.deletedAt&&canModify(s));
+  if(!t.length){$('#trList').innerHTML='<li class="empty-l">휴지통이 비었어요.</li>';return}
+  $('#trList').innerHTML=t.map(s=>{const d=new Date(s.deletedAt);const who=s.uid!==B.me&&s.author?esc(s.author)+' · ':'';
+    return `<li class="tr" data-id="${esc(s.id)}"><span><b>${esc(s.title||'제목 없음')}</b><small>${who}${d.getMonth()+1}월 ${d.getDate()}일 삭제</small></span><span class="acts">${askPurge===s.id?'<button data-a="purge" class="warn">영구 삭제</button><button data-a="no">취소</button>':'<button data-a="restore">되살리기</button><button data-a="ask">영구 삭제</button>'}</span></li>`}).join('');
+}
+$('#trList').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const id=b.closest('.tr').dataset.id,s=B.all.find(x=>x.id===id);if(!s)return;const a=b.dataset.a;
+  if(a==='ask'){askPurge=id;renderTrash();return}
+  if(a==='no'){askPurge='';renderTrash();return}
+  b.disabled=true;
+  try{if(a==='restore')await patchSet(s,{deletedAt:null});if(a==='purge'){askPurge='';await purgeSet(s)}}catch(err){note('처리하지 못했어요. 권한을 확인해 주세요.')}
+  renderTrash();renderLib();
+});
+$('#trBtn').onclick=()=>{show('#lib',false);show('#trash',true);askPurge='';renderTrash()};
+$('#trBack').onclick=goLib;
+
+/* ---------- backup ---------- */
+function bkMsg(t){$('#bkMsg').textContent=t||''}
+$('#bkBtn').onclick=()=>{show('#lib',false);show('#bk',true);show('#bkInL',B.canAdd);bkMsg('')};
+$('#bkClose').onclick=goLib;
+const KEEP=['fmt','title','script','mode','tts','segs','spk','pr','dur','name','lang','visibility','createdAt','updatedAt','deletedAt'];
+$('#bkSave').onclick=async()=>{
+  const withAudio=$('#bkAudio').checked;$('#bkSave').disabled=true;
+  try{
+    const sets=[];let i=0;
+    for(const s of B.all){
+      i++;bkMsg(`정리하는 중… ${i}/${B.all.length}`);
+      const o={};for(const k of KEEP)if(s[k]!=null)o[k]=s[k];
+      if(s.author)o.by=s.author;
+      if(s.audio)o.audio={path:s.audio.path,mime:s.audio.mime};
+      if(withAudio&&!s.tts){try{const bl=await getAudio(s);if(bl)o.audio=Object.assign(o.audio||{},{mime:bl.type||'audio/mpeg',data:await b64(bl)})}catch(e){o.audioMissing=true}}
+      sets.push(o);
+    }
+    const now=new Date(),p=n=>String(n).padStart(2,'0');
+    const file=new Blob([JSON.stringify({app:'latihan-naskah',version:1,exportedAt:now.toISOString(),sets})],{type:'application/json'});
+    saveFile(`shadowing-backup-${now.getFullYear()}${p(now.getMonth()+1)}${p(now.getDate())}${withAudio?'-audio':''}.json`,file);
+    bkMsg(`세트 ${sets.length}개를 백업했어요 (${(file.size/1048576).toFixed(1)}MB).`);
+  }catch(e){const c=e&&e.code;bkMsg('백업 파일을 만들지 못했어요. 녹음 포함 없이 다시 시도해 보세요.')}
+  finally{$('#bkSave').disabled=false}
+};
+const str=(v,n)=>typeof v==='string'?v.slice(0,n):'';
+$('#bkIn').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  let j;try{j=JSON.parse(await f.text())}catch(x){bkMsg('백업 파일을 읽지 못했어요.');return}
+  if(!j||j.app!=='latihan-naskah'||!Array.isArray(j.sets)){bkMsg('이 페이지의 백업 파일이 아니에요.');return}
+  let ok=0,skip=0,fail=0;const notes=[];
+  for(const s of j.sets){
+    const script=str(s.script,60000);if(!script){fail++;continue}
+    const title=str(s.title,80)||'제목 없음';
+    if(B.all.some(x=>x.script===script&&x.title===title&&!x.deletedAt)){skip++;continue}
+    const n=parseScript(script,s.mode,s.fmt===2?'pk':'kp').length,arr=(a,f)=>Array.isArray(a)&&a.length===n?a.map(f):undefined;
+    const data={title,script,mode:['auto','line','sentence'].includes(s.mode)?s.mode:'auto',tts:!!s.tts};
+    if(s.fmt===2)data.fmt=2;
+    data.lang=typeof s.lang==='string'&&/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/.test(s.lang)?s.lang:'id';
+    if(B.remote)data.visibility=s.visibility==='private'||s.visibility==='partial'?'private':'public';
+    const segs=arr(s.segs,g=>({s:+g.s||0,e:+g.e||0}));if(segs)data.segs=segs;
+    const spk=arr(s.spk,x=>str(x,24));if(spk)data.spk=spk;
+    const pr=arr(s.pr,x=>str(x,400));if(pr)data.pr=pr;
+    if(+s.dur)data.dur=+s.dur;if(s.name)data.name=str(s.name,120);
+    if(+s.createdAt)data.createdAt=+s.createdAt;
+    let blob=null;
+    if(!data.tts&&s.audio){
+      if(typeof s.audio.data==='string'){try{const bin=atob(s.audio.data);const u8=new Uint8Array(bin.length);for(let k=0;k<bin.length;k++)u8[k]=bin.charCodeAt(k);blob=new Blob([u8],{type:str(s.audio.mime,60)||'audio/mpeg'})}catch(x){}}
+      else if(B.remote&&/^[A-Za-z0-9._-]{8,120}$/.test(s.audio.path||''))data.audio={path:s.audio.path,mime:str(s.audio.mime,60)};
+      if(!blob&&!data.audio){data.tts=true;notes.push(title)}
+    }
+    bkMsg(`불러오는 중… ${ok+skip+fail+1}/${j.sets.length}`);
+    try{await addSet(data,blob);ok++}catch(x){fail++;if(x&&x.code==='doc_full'){notes.push('(저장 공간이 가득 차 나머지는 불러오지 못했어요)');break}}
+  }
+  bkMsg(`${ok}개 불러옴${skip?` · 이미 있어서 건너뜀 ${skip}개`:''}${fail?` · 실패 ${fail}개`:''}`+(notes.length?`\n녹음 없이 기계 음성으로 불러온 세트: ${notes.join(', ')}`:''));
+};
+
+/* ---------- sharing ---------- */
+function Picker(root){
+  const nm='v'+Math.random().toString(36).slice(2,8);
+  root.innerHTML=`<div class="vis" role="radiogroup" aria-label="공유 범위">
+<label><input type="radio" name="${nm}" value="public"><span>전체 공개<small>로그인한 모든 사람이 볼 수 있어요</small></span></label>
+<label><input type="radio" name="${nm}" value="partial"><span>일부 공개<small>지정한 사람에게 알림이 가고, 수락하면 그 사람 목록에 들어가요</small></span></label>
+<label><input type="radio" name="${nm}" value="private"><span>비공개<small>나만 볼 수 있어요</small></span></label></div>
+<div class="mention hidden"><div class="mchips"></div>
+<input class="inp" placeholder="@아이디 또는 이름으로 찾아 추가" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="공유할 사람 찾기">
+<ul class="sugg"></ul></div>`;
+  const men=root.querySelector('.mention'),chips=root.querySelector('.mchips'),inp=root.querySelector('input.inp'),sug=root.querySelector('.sugg');
+  const STAT={pending:'대기 중',accepted:'수락함',declined:'거절함'};
+  let users=[],t=0,seq=0;
+  const vis=()=>{const r=root.querySelector('input[type=radio]:checked');return r?r.value:'public'};
+  function paint(){men.classList.toggle('hidden',vis()!=='partial');
+    chips.innerHTML=users.map((x,i)=>`<span class="mchip">${esc(x.name)} <em>@${esc(x.login)}${x.status?' · '+STAT[x.status]:''}</em><button type="button" data-i="${i}" aria-label="${esc(x.name)} 빼기">×</button></span>`).join('')}
+  root.addEventListener('change',e=>{if(e.target.type==='radio')paint()});
+  chips.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;users.splice(+b.dataset.i,1);paint()});
+  inp.addEventListener('input',()=>{clearTimeout(t);const q=inp.value.trim();if(!q.replace(/^@/,'')){sug.innerHTML='';return}
+    t=setTimeout(async()=>{const my=++seq;let res=[];try{const {data}=await sb.rpc('find_users',{p_token:B.session,p_q:q});res=data||[]}catch(e){}
+      if(my!==seq)return;const lst=res.filter(x=>!users.some(y=>y.id===x.id));
+      sug.innerHTML=lst.length?lst.map(x=>`<li><button type="button" data-u="${esc(JSON.stringify(x))}">${esc(x.name)}<small>@${esc(x.login)}</small></button></li>`).join(''):'<li><button type="button" disabled>찾는 사람이 없어요</button></li>'},250)});
+  sug.addEventListener('click',e=>{const b=e.target.closest('button[data-u]');if(!b)return;const x=JSON.parse(b.dataset.u);users.push({id:x.id,login:x.login,name:x.name});inp.value='';sug.innerHTML='';paint();inp.focus()});
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const b=sug.querySelector('button[data-u]');if(b)b.click()}});
+  return{get:()=>({vis:vis(),users:users.slice()}),
+    set(v,us){const r=root.querySelector(`input[value="${v}"]`)||root.querySelector('input[value="public"]');r.checked=true;users=(us||[]).map(x=>Object.assign({},x));inp.value='';sug.innerHTML='';paint()}};
+}
+$('#lang').innerHTML=LANGS.map(l=>`<option value="${l[0]}">${l[1]}</option>`).join('');
+const fPick=Picker($('#fVis')),sPick=Picker($('#sVis'));
+function shareInfo(s){return s.visibility==='partial'?`일부 공개 · ${s.shareCount||0}명에게 공유`:VIS_NAME[s.visibility]||''}
+function shareMsg(t){$('#shareMsg').textContent=t||''}
+$('#shareBtn').onclick=async()=>{const s=S.set;if(!s)return;show('#sharePanel',true);shareMsg('불러오는 중…');
+  let us=[];try{const {data}=await sb.rpc('get_shares',{p_token:B.session,p_id:s.id});us=data||[]}catch(e){}
+  sPick.set(s.visibility,us);shareMsg('');$('#sharePanel').scrollIntoView({block:'nearest'})};
+$('#shareCancel').onclick=()=>show('#sharePanel',false);
+$('#shareSave').onclick=async()=>{const s=S.set;if(!s)return;const v=sPick.get();
+  if(v.vis==='partial'&&!v.users.length){shareMsg('일부 공개는 공유할 사람을 한 명 이상 추가해 주세요.');return}
+  $('#shareSave').disabled=true;
+  try{const {data,error}=await sb.rpc('share_set',{p_token:B.session,p_id:s.id,p_visibility:v.vis,p_users:v.vis==='partial'?v.users.map(x=>x.id):null});
+    if(error||!data||data.error){shareMsg('저장하지 못했어요. 다시 시도해 주세요.');return}
+    await load();const n=B.all.find(x=>x.id===s.id);if(n){S.set=n;$('#shareInfo').textContent=shareInfo(n)}
+    shareMsg(v.vis==='partial'?'저장했어요. 새로 추가한 사람에게 알림이 가요.':'저장했어요.');setTimeout(()=>show('#sharePanel',false),1200)}
+  finally{$('#shareSave').disabled=false}};
+$('#leaveBtn').onclick=async()=>{const s=S.set;if(!s)return;$('#leaveBtn').disabled=true;
+  try{const {data,error}=await sb.rpc('respond_share',{p_token:B.session,p_set_id:s.id,p_accept:false});
+    if(error||!data||data.error){note('처리하지 못했어요. 다시 시도해 주세요.');return}
+    goLib();await load();note('내 목록에서 뺐어요. 다시 보려면 공유한 사람에게 다시 공유해 달라고 하세요.')}
+  finally{$('#leaveBtn').disabled=false}};
+let seenInbox=0;
+async function loadInbox(){
+  if(!B.remote||!B.session)return;
+  try{const {data,error}=await sb.rpc('list_inbox',{p_token:B.session});if(error)return;B.inbox=data||[]}catch(e){return}
+  const n=B.inbox.length;
+  if(n>seenInbox&&$('#lib').classList.contains('hidden'))note(`새 공유 알림이 ${n-seenInbox}개 왔어요. 목록 화면에서 수락할 수 있어요.`);
+  seenInbox=n;document.title=(n?`(${n}) `:'')+'쉐도잉 스크립트';renderInbox();
+}
+function renderInbox(){
+  const n=B.inbox.length;show('#inboxBtn',n>0);$('#inboxBtn').textContent='알림 '+n;show('#inbox',n>0);
+  $('#inbox').innerHTML=B.inbox.map(x=>`<div class="inv" data-id="${esc(x.set_id)}"><span><b>${esc(x.owner_name||'누군가')}님이 ‘${esc(x.title)}’ 세트를 공유했어요</b><small><span class="lt">${esc(langName(x.lang))}</span>수락하면 내 목록에 들어가요</small></span><span class="acts"><button class="ok" data-a="1">수락</button><button data-a="0">거절</button></span></div>`).join('');
+}
+$('#inbox').addEventListener('click',async e=>{const b=e.target.closest('button[data-a]');if(!b)return;
+  const id=b.closest('.inv').dataset.id,acc=b.dataset.a==='1';b.disabled=true;
+  let ok=false;try{const {data,error}=await sb.rpc('respond_share',{p_token:B.session,p_set_id:id,p_accept:acc});ok=!error&&data&&!data.error}catch(x){}
+  if(!ok){note('처리하지 못했어요. 다시 시도해 주세요.');b.disabled=false;return}
+  note(acc?'세트를 내 목록에 추가했어요.':'공유를 거절했어요.');await load()});
+$('#inboxBtn').onclick=()=>$('#inbox').scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+$('#note').addEventListener('click',()=>note(''));
+
+/* ---------- account ---------- */
+const AUTH_ERR={bad_login:'아이디나 비밀번호가 맞지 않아요.',locked:'비밀번호를 여러 번 틀려 10분 동안 잠겼어요. 잠시 뒤 다시 시도해 주세요.',join_code:'참여 코드가 맞지 않아요. 사이트를 알려 준 사람에게 물어보세요.',bad_id:'아이디는 영문 소문자·숫자·_ . - 로 3~20자예요.',bad_name:'이름은 1~20자로 적어 주세요.',bad_pw:'비밀번호는 6자 이상이에요.',id_taken:'이미 있는 아이디예요. 다른 아이디를 골라 주세요.',full:'가입 인원이 가득 찼어요. 관리자에게 문의해 주세요.',auth:'로그인이 만료됐어요. 다시 로그인해 주세요.',forbidden:'관리자 키가 필요해요.',no_user:'그런 아이디가 없어요.'};
+let upMode=false;
+function auMsg(t){$('#auMsg').textContent=t||''}
+function setTab(up){upMode=up;$('#tabIn').setAttribute('aria-pressed',String(!up));$('#tabUp').setAttribute('aria-pressed',String(up));
+  document.querySelectorAll('.upOnly').forEach(e=>e.classList.toggle('hidden',!up));show('#auCodeRow',up&&B.needCode);
+  $('#auGo').textContent=up?'가입하고 시작하기':'로그인';$('#auPw').setAttribute('autocomplete',up?'new-password':'current-password');auMsg('')}
+$('#tabIn').onclick=()=>setTab(false);$('#tabUp').onclick=()=>setTab(true);
+let afterLogin='';
+function showAuth(reason,then){stop();afterLogin=then||'';for(const id of ['#lib','#practice','#setup','#bk','#trash','#me','#bar'])show(id,false);show('#auth',true);setTab(false);
+  $('#authWhy').textContent=reason||'로그인하면 대본을 추가하고, 내 세트를 고치고, 공유 알림을 받을 수 있어요.';
+  $('#wave').style.height='';show('#wEmpty',true);$('#wEmpty').textContent='세트를 열면 여기에 파형과 멘트 구간이 표시됩니다';cv.classList.add('hidden');scrollTo(0,0)}
+function accountUI(){$('#meBtn').textContent=B.session?'내 정보':'로그인';$('#hello').textContent=B.session?B.name+' 님':'로그인 없이 보는 중'}
+$('#authBack').onclick=()=>{afterLogin='';goLib()};
+$('#authForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const id=$('#auId').value.trim().toLowerCase(),pw=$('#auPw').value;
+  if(!id||!pw){auMsg('아이디와 비밀번호를 적어 주세요.');return}
+  let nm='';
+  if(upMode){nm=$('#auName').value.trim();if(!nm){auMsg('이름을 적어 주세요.');return}if(pw!==$('#auPw2').value){auMsg('비밀번호 확인이 맞지 않아요.');return}}
+  $('#auGo').disabled=true;auMsg(upMode?'가입하는 중…':'로그인하는 중…');
+  try{
+    const r=upMode?await sb.rpc('sign_up',{p_login:id,p_name:nm,p_pw:pw,p_code:$('#auCode').value.trim()||null}):await sb.rpc('sign_in',{p_login:id,p_pw:pw});
+    if(r.error){auMsg('서버에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.');return}
+    const d=r.data||{};
+    if(d.error){auMsg(AUTH_ERR[d.error]||'다시 시도해 주세요.');return}
+    pref.set('session',d.token);$('#auPw').value='';$('#auPw2').value='';auMsg('');
+    await loggedIn(d);
+  }catch(x){auMsg('서버에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.')}
+  finally{$('#auGo').disabled=false}
+});
+async function loggedIn(d){
+  B.session=pref.get('session','');B.me=d.id;B.login=d.login;B.name=d.name;B.canAdd=true;
+  accountUI();show('#auth',false);const next=afterLogin;afterLogin='';goLib();if(next==='add')openForm();
+  const old=pref.get('token','');
+  if(old){try{const {data}=await sb.rpc('claim_sets',{p_token:B.session,p_key:old});if(data>0)note(`이 기기에서 예전에 올린 세트 ${data}개를 내 계정으로 옮겼어요.`)}catch(e){}pref.set('token','')}
+  startLib();
+}
+async function logout(expired){
+  stop();
+  if(!expired&&B.session){try{await sb.rpc('sign_out',{p_token:B.session})}catch(e){}}
+  pref.set('session','');pref.set('admin','');Object.assign(B,{session:'',me:null,login:'',name:'',admin:false,adminKey:'',canAdd:false,inbox:[]});seenInbox=0;renderInbox();document.title='쉐도잉 스크립트';S.set=null;
+  accountUI();
+  if(expired){showAuth(AUTH_ERR.auth)}else{goLib();note('로그아웃했어요. 전체 공개 세트는 계속 볼 수 있어요.')}
+  load();
+}
+
+/* ---------- my info ---------- */
+function meMsg(t){$('#meMsg').textContent=t||''}
+function renderMe(){$('#meWho').textContent='아이디: '+B.login;$('#meName').value=B.name||'';
+  $('#adminState').textContent=B.admin?'관리자 모드가 켜져 있어요. 모든 세트를 고치고 지울 수 있어요.':'';show('#adminOff',B.admin);show('#resetBox',B.admin)}
+$('#meBtn').onclick=()=>{if(B.remote&&!B.session){showAuth();return}show('#lib',false);show('#me',true);meMsg('');renderMe()};
+$('#meClose').onclick=goLib;
+$('#logoutBtn').onclick=()=>logout(false);
+$('#meNameSave').onclick=async()=>{
+  const {data,error}=await sb.rpc('set_name',{p_token:B.session,p_name:$('#meName').value.trim()});
+  if(error||!data||data.error){meMsg(AUTH_ERR[(data||{}).error]||'저장하지 못했어요.');return}
+  B.name=data.name;$('#hello').textContent=B.name+' 님';meMsg('이름을 바꿨어요. 내가 올린 세트에도 새 이름으로 보여요.');load()};
+$('#pwGo').onclick=async()=>{
+  const o=$('#pwOld').value,n=$('#pwNew').value;if(!o||!n){meMsg('지금 비밀번호와 새 비밀번호를 모두 적어 주세요.');return}
+  const {data,error}=await sb.rpc('change_password',{p_token:B.session,p_old:o,p_new:n});
+  if(error||!data||data.error){meMsg(data&&data.error==='bad_login'?'지금 비밀번호가 맞지 않아요.':AUTH_ERR[(data||{}).error]||'바꾸지 못했어요.');return}
+  $('#pwOld').value='';$('#pwNew').value='';meMsg('비밀번호를 바꿨어요. 다른 기기에서는 새 비밀번호로 다시 로그인해야 해요.')};
+$('#adminGo').onclick=async()=>{const k=$('#adminIn').value;if(!k)return;
+  const {data,error}=await sb.rpc('is_admin',{p_admin:k});
+  if(error||!data){meMsg('관리자 키가 맞지 않아요.');return}
+  B.admin=true;B.adminKey=k;pref.set('admin',k);$('#adminIn').value='';renderMe();renderLib();meMsg('관리자 모드를 켰어요.')};
+$('#adminOff').onclick=()=>{B.admin=false;B.adminKey='';pref.set('admin','');renderMe();renderLib();meMsg('관리자 모드를 껐어요.')};
+$('#rsGo').onclick=async()=>{
+  const id=$('#rsId').value.trim().toLowerCase(),pw=$('#rsPw').value;if(!id||!pw){meMsg('아이디와 새 비밀번호를 적어 주세요.');return}
+  const {data,error}=await sb.rpc('admin_reset_password',{p_token:B.session,p_admin:B.adminKey,p_login:id,p_new:pw});
+  if(error||!data||data.error){meMsg(AUTH_ERR[(data||{}).error]||'바꾸지 못했어요.');return}
+  $('#rsId').value='';$('#rsPw').value='';meMsg(`${id}의 비밀번호를 새로 정했어요. 그 사람에게 새 비밀번호를 알려 주세요.`)};
+
+/* ---------- start ---------- */
+cv.classList.add('hidden');
+let libStarted=false;
+function startLib(){
+  if(libStarted){load();return}
+  libStarted=true;let first=true;
+  listen(()=>{
+    if(!$('#lib').classList.contains('hidden'))renderLib();
+    if(S.set){const s=B.lib.find(x=>x.id===S.set.id);if(s)S.set=s}
+    if(first&&B.lib.length){first=false;const last=pref.get('last','');const s=B.lib.find(x=>x.id===last);if(s&&!S.set&&$('#setup').classList.contains('hidden')&&$('#me').classList.contains('hidden'))openSet(s)}
+    else if(B.lib.length)first=false;
+  });
+  renderLib();
+}
+(async()=>{
+  const ok=CONFIG.url&&CONFIG.key&&!/YOUR|여기/.test(CONFIG.url+CONFIG.key)&&window.supabase&&window.supabase.createClient;
+  if(ok){try{sb=window.supabase.createClient(CONFIG.url,CONFIG.key,{auth:{persistSession:false,autoRefreshToken:false}})}catch(e){sb=null}}
+  if(!sb){
+    B.remote=false;B.admin=true;B.canAdd=true;B.me='local';show('#meBtn',false);show('#lib',true);
+    note(CONFIG.url&&!/YOUR/.test(CONFIG.url)?'서버에 연결하지 못해 이 브라우저에만 저장돼요. 설정을 확인해 주세요.':'아직 서버 설정 전이라 이 브라우저에만 저장돼요. 설정 방법은 README를 참고하세요.');
+    startLib();return;
+  }
+  B.remote=true;B.canAdd=false;accountUI();
+  try{const {data}=await sb.rpc('needs_join_code');B.needCode=!!data}catch(e){}
+  const ak=pref.get('admin','');
+  if(ak){try{const {data}=await sb.rpc('is_admin',{p_admin:ak});if(data){B.admin=true;B.adminKey=ak}else pref.set('admin','')}catch(e){}}
+  const t=pref.get('session','');
+  if(t){
+    try{const {data,error}=await sb.rpc('me',{p_token:t});
+      if(!error&&data&&data.id){await loggedIn(data);return}
+      if(!error){pref.set('session','');note('로그인이 만료됐어요. 대본을 추가하려면 다시 로그인해 주세요.')}}
+    catch(e){}
+  }
+  goLib();startLib();
+})();
+}
+</script>
+</body>
+</html>
