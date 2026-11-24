@@ -186,7 +186,7 @@ body.pred .pre{display:block}
     <div class="fhead hidden" id="fHead">
       <button class="back" id="fBack">← 전체 목록</button>
       <div class="sum"><h2 id="fTitleH"></h2><span id="fInfo"></span></div>
-      <div class="row" style="margin-top:10px"><button class="btn hidden" id="fCfgBtn">폴더 설정</button><button class="btn hidden" id="fLeave">내 목록에서 빼기</button></div>
+      <div class="row hidden" id="fLeaveRow" style="margin-top:10px"><button class="btn" id="fLeave">내 목록에서 빼기</button></div>
     </div>
     <div class="spkbar hidden" id="langBar" role="group" aria-label="언어별 보기" style="margin-top:14px"></div>
     <ul class="sets" id="sets"><li class="empty-l">불러오는 중…</li></ul>
@@ -609,7 +609,7 @@ function renderLib(){
   if(B.folder&&!fOf(B.folder))B.folder=null;
   const F=fOf(B.folder);
   show('#newFld',B.remote&&!!B.session&&!F);show('#fHead',!!F);
-  if(F){$('#fTitleH').textContent=F.title;$('#fInfo').textContent=folderInfo(F);show('#fCfgBtn',myFolder(F));show('#fLeave',!!F.shared_with_me&&!myFolder(F))}
+  if(F){$('#fTitleH').textContent=F.title;$('#fInfo').textContent=folderInfo(F);show('#fLeaveRow',!!F.shared_with_me&&!myFolder(F))}
   const el=$('#sets');
   const pool=F?B.lib.filter(s=>s.folder===F.id):B.lib.filter(s=>!inFolder(s));
   const folders=F?[]:B.folders;
@@ -1088,7 +1088,6 @@ async function openFolderForm(f){
 }
 async function reloadLib(){while(loading)await new Promise(r=>setTimeout(r,100));await load()}
 $('#newFld').onclick=()=>openFolderForm(null);
-$('#fCfgBtn').onclick=()=>openFolderForm(fOf(B.folder));
 $('#fBack').onclick=()=>{B.folder=null;renderLib()};
 $('#fldCancel').onclick=()=>{FED=null;goLib()};
 $('#fldSave').onclick=async()=>{const t=$('#fldName').value.trim();if(!t){fldMsg('폴더 이름을 적어 주세요.');return}

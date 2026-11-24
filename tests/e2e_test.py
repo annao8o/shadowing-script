@@ -228,6 +228,9 @@ async def main():
         await B.wait_for_timeout(300)
         check("공항에서" in await B.inner_text("#sets") and await B.locator("#sets .gear").count() == 0, "recipient sees the folder's sets but cannot edit")
         check(await B.is_visible("#fLeave"), "recipient can leave the folder")
+        await A.click("#sets .set[data-fid]")
+        check(await A.locator("#fHead button.btn:visible").count() == 0, "owner folder header has no extra buttons")
+        await A.click("#fBack")
 
         print("guest sees only public")
         await sync(B, G)
