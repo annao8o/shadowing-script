@@ -99,6 +99,9 @@ body.edit .ed{display:flex}
 .del{margin:8px 0 28px;font-size:14px;color:var(--mute);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .del span{display:inline-flex;flex-wrap:wrap;gap:8px;align-items:center}
 .sum .btn{margin-inline-start:auto}
+.sum.hi{justify-content:flex-end;align-items:center;gap:8px}
+.meic{width:44px;height:44px;flex:none;border-radius:50%;border:1px solid var(--line);background:var(--chip);color:var(--ink);display:grid;place-items:center;padding:0;cursor:pointer}
+.meic:hover,.meic:focus-visible{border-color:var(--ink)}
 .spkbar{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
 .sc{min-height:40px;padding:0 14px;border-radius:999px;border:1.5px solid var(--c,var(--line));background:transparent;font-size:14px;font-weight:700;color:var(--c,var(--ink))}
 .sc[aria-pressed=true]{background:var(--c,var(--ink));color:var(--bg);border-color:var(--c,var(--ink))}
@@ -182,7 +185,7 @@ body.pred .pre{display:block}
     <p class="hint">비밀번호를 잊었다면 사이트 관리자에게 새 비밀번호를 부탁하세요.</p>
   </section>
   <section id="lib">
-    <div class="sum"><span id="hello" style="margin-inline-start:auto"></span></div>
+    <div class="sum hi"><span id="hello"></span><button class="meic hidden" id="meIcon" aria-label="내 정보" title="내 정보"><svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm0 14a8 8 0 0 1-6.14-2.88 9.95 9.95 0 0 1 12.28 0A8 8 0 0 1 12 20z"/></svg></button></div>
     <div class="row" style="margin-top:10px"><button class="btn main hidden" id="addBtn">+ 새 대본 추가</button><button class="btn hidden" id="newFld">+ 새 폴더</button><button class="btn hidden" id="inboxBtn">알림</button><button class="btn" id="bkBtn">백업</button><button class="btn" id="meBtn">내 정보</button><button class="btn hidden" id="trBtn">휴지통</button></div>
     <div class="inbox hidden" id="inbox" role="region" aria-label="공유 알림"></div>
     <div class="fhead hidden" id="fHead">
@@ -1158,7 +1161,7 @@ let afterLogin='';
 function showAuth(reason,then){stop();afterLogin=then||'';for(const id of ['#lib','#practice','#setup','#bk','#trash','#me','#bar'])show(id,false);show('#auth',true);setTab(false);
   $('#authWhy').textContent=reason||'로그인하면 대본을 추가하고, 내 세트를 고치고, 공유 알림을 받을 수 있어요.';
   $('#wave').style.height='';show('#wEmpty',true);$('#wEmpty').textContent='세트를 열면 여기에 파형과 멘트 구간이 표시됩니다';cv.classList.add('hidden');scrollTo(0,0)}
-function accountUI(){$('#meBtn').textContent=B.session?'내 정보':'로그인';$('#hello').textContent=B.session?B.name+' 님':'로그인 없이 보는 중'}
+function accountUI(){$('#meBtn').textContent='로그인';show('#meBtn',!B.session);show('#meIcon',!!B.session);$('#hello').textContent=B.session?B.name+' 님':'로그인 없이 보는 중'}
 $('#authBack').onclick=()=>{afterLogin='';goLib()};
 $('#authForm').addEventListener('submit',async e=>{
   e.preventDefault();
@@ -1198,6 +1201,7 @@ function meMsg(t){$('#meMsg').textContent=t||''}
 function renderMe(){$('#meWho').textContent='아이디: '+B.login;$('#meName').value=B.name||'';
   $('#adminState').textContent=B.admin?'관리자 모드가 켜져 있어요. 모든 세트를 고치고 지울 수 있어요.':'';show('#adminOff',B.admin);show('#resetBox',B.admin)}
 $('#meBtn').onclick=()=>{if(B.remote&&!B.session){showAuth();return}show('#lib',false);show('#me',true);meMsg('');renderMe()};
+$('#meIcon').onclick=()=>$('#meBtn').click();
 $('#meClose').onclick=goLib;
 $('#logoutBtn').onclick=()=>logout(false);
 $('#meNameSave').onclick=async()=>{

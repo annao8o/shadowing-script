@@ -94,6 +94,7 @@ async def main():
         await A.click("#auGo")
         await A.wait_for_timeout(500)
         check(await A.is_visible("#setup"), "after sign-up the add form opens")
+        check(await A.is_visible("#meIcon") and not await A.is_visible("#meBtn"), "signed in: 내 정보 is the icon next to the name")
         await A.fill("#title", "공개 세트")
         await A.fill("#script", "MC: Selamat pagi. | | 좋은 아침\nB: Terima kasih.")
         await A.set_input_files("#audIn", WAV)
