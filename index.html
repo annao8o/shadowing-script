@@ -485,6 +485,8 @@ const FOLDER='<path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-
 const PLAY='<path d="M7 4v16l13-8z"/>',PAUSE='<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>';
 const au=$('#au'),cv=$('#cv'),list=$('#list');
 const S={set:null,items:[],segs:[],spk:[],pr:[],filter:null,pk:null,hop:0.01,dur:0,cur:-1,playing:false,left:0,stopAt:0,timer:0,temp:false,resting:false,tts:false,tok:0,t0:0,newSpk:-1};
+let ROUTE0=location.hash;
+function setRoute(r){const h=r?'#'+r:'';if(location.hash===h)return;try{history.replaceState(null,'',h||location.pathname+location.search)}catch(e){}}
 const B={folders:[],folder:null,inbox:[],remote:false,session:'',me:null,login:'',name:'',admin:false,adminKey:'',canAdd:false,needCode:false,all:[],lib:[]};
 function setAll(arr){B.all=sortLib(arr);B.lib=B.all.filter(s=>!s.deletedAt)}
 const SY=window.speechSynthesis;let voices=[],raf=0;
@@ -608,6 +610,7 @@ function renderLib(){
   if(!$('#trash').classList.contains('hidden'))renderTrash();
   if(B.folder&&!fOf(B.folder))B.folder=null;
   const F=fOf(B.folder);
+  if(!$('#lib').classList.contains('hidden'))setRoute(F?'folder='+F.id:'');
   show('#newFld',B.remote&&!!B.session&&!F);show('#fHead',!!F);
   if(F){$('#fTitleH').textContent=F.title;$('#fInfo').textContent=folderInfo(F);show('#fLeaveRow',!!F.shared_with_me&&!myFolder(F))}
   const el=$('#sets');
@@ -649,7 +652,7 @@ async function openSet(set){
   S.segs=(set.segs&&set.segs.length===S.items.length)?set.segs.map(g=>({s:+g.s,e:+g.e})):S.items.map(()=>({s:0,e:0}));
   S.spk=(set.spk&&set.spk.length===S.items.length)?set.spk.map(x=>String(x||'')):S.items.map(i=>i.sp||'');
   S.pr=(set.pr&&set.pr.length===S.items.length)?set.pr.map(x=>String(x||'')):S.items.map(()=>'');
-  pref.set('last',set.id);
+  setRoute('set='+set.id);
   show('#lib',false);show('#setup',false);show('#practice',true);show('#bar',true);show('#delBox',canModify(set));show('#delBtn',true);
   const own=B.remote&&set.uid===B.me;show('#leaveBox',B.remote&&set.sharedWithMe&&!own);
   setupView();scrollTo(0,0);
@@ -1213,14 +1216,21 @@ $('#rsGo').onclick=async()=>{
 /* ---------- start ---------- */
 cv.classList.add('hidden');
 let libStarted=false;
+// reopen the page that was showing before a reload (#set=<id> or #folder=<id>)
+function restoreRoute(){
+  const m=/^#(set|folder)=([\w-]+)$/.exec(ROUTE0);ROUTE0='';
+  if(!m||$('#lib').classList.contains('hidden'))return;
+  if(m[1]==='folder'){if(fOf(m[2])){B.folder=m[2];renderLib()}return}
+  const s=B.lib.find(x=>x.id===m[2]);
+  if(s&&!S.set){B.folder=inFolder(s);openSet(s)}
+}
 function startLib(){
   if(libStarted){load();return}
   libStarted=true;let first=true;
   listen(()=>{
     if(!$('#lib').classList.contains('hidden'))renderLib();
     if(S.set){const s=B.lib.find(x=>x.id===S.set.id);if(s)S.set=s}
-    if(first&&B.lib.length){first=false;const last=pref.get('last','');const s=B.lib.find(x=>x.id===last);if(s&&!S.set&&$('#setup').classList.contains('hidden')&&$('#me').classList.contains('hidden'))openSet(s)}
-    else if(B.lib.length)first=false;
+    if(first){first=false;restoreRoute()}
   });
   renderLib();
 }
