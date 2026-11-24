@@ -245,6 +245,12 @@ async def main():
         await A.reload()
         await A.wait_for_timeout(700)
         check(await A.is_visible("#lib") and not await A.is_visible("#practice") and not await A.is_visible("#fHead"), "reload on the main list stays on the list")
+        await A.click('.set[data-fid]')
+        await A.click('.set:has-text("공항에서")')
+        await A.wait_for_timeout(300)
+        await A.click("#homeLink")
+        await A.wait_for_timeout(300)
+        check(await A.is_visible("#lib") and not await A.is_visible("#fHead"), "main title goes back to the main list")
 
         print("guest sees only public")
         await sync(B, G)

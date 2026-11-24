@@ -21,6 +21,7 @@ button{cursor:pointer}
 :focus-visible{outline:3px solid var(--redink);outline-offset:2px}
 .top{background:var(--red);color:#fff;padding:clamp(20px,4vw,40px) max(5vw,16px) 18px}
 .top h1{margin:0;font-size:clamp(28px,6vw,44px);line-height:1.05;font-weight:800;letter-spacing:-.01em;text-wrap:balance}
+.top h1 a{color:inherit;text-decoration:none}
 .top p{margin:6px 0 0;opacity:.88;font-size:15px}
 .wave{position:relative;height:120px;margin-top:18px;border-radius:12px;background:rgba(0,0,0,.14);touch-action:manipulation}
 .wave canvas{position:absolute;inset:0;width:100%;height:100%;cursor:pointer}
@@ -157,7 +158,7 @@ body.pred .pre{display:block}
 </head>
 <body>
 <header class="top">
-  <h1>Shadowing Script</h1>
+  <h1><a href="./" id="homeLink">Shadowing Script</a></h1>
   <p>외국어 대본을 멘트별로 듣고 따라 말하는 쉐도잉 연습장</p>
   <div class="wave" id="wave"><canvas id="cv" aria-label="음성 파형. 누르면 해당 멘트를 재생합니다"></canvas><div class="empty" id="wEmpty">세트를 열면 여기에 파형과 멘트 구간이 표시됩니다</div></div>
 </header>
@@ -180,7 +181,7 @@ body.pred .pre{display:block}
     <p class="hint">비밀번호를 잊었다면 사이트 관리자에게 새 비밀번호를 부탁하세요.</p>
   </section>
   <section id="lib">
-    <div class="sum"><h2>연습 세트</h2><span id="hello"></span></div>
+    <div class="sum"><span id="hello" style="margin-inline-start:auto"></span></div>
     <div class="row" style="margin-top:10px"><button class="btn main hidden" id="addBtn">+ 새 대본 추가</button><button class="btn hidden" id="newFld">+ 새 폴더</button><button class="btn hidden" id="inboxBtn">알림</button><button class="btn" id="bkBtn">백업</button><button class="btn" id="meBtn">내 정보</button><button class="btn hidden" id="trBtn">휴지통</button></div>
     <div class="inbox hidden" id="inbox" role="region" aria-label="공유 알림"></div>
     <div class="fhead hidden" id="fHead">
@@ -1214,6 +1215,7 @@ $('#rsGo').onclick=async()=>{
   $('#rsId').value='';$('#rsPw').value='';meMsg(`${id}의 비밀번호를 새로 정했어요. 그 사람에게 새 비밀번호를 알려 주세요.`)};
 
 /* ---------- start ---------- */
+$('#homeLink').addEventListener('click',e=>{if(e.metaKey||e.ctrlKey||e.shiftKey||e.button)return;e.preventDefault();afterLogin='';EDIT=null;FED=null;B.folder=null;goLib();scrollTo(0,0)});
 cv.classList.add('hidden');
 let libStarted=false;
 // reopen the page that was showing before a reload (#set=<id> or #folder=<id>)
