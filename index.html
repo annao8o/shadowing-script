@@ -100,7 +100,6 @@ body.edit .ed{display:flex}
 .set .go.gr{background:var(--chip);color:var(--ink)}
 .btn.warn{background:var(--red);border-color:var(--red);color:#fff}
 .fhead{margin-top:14px;padding:14px;border-radius:14px;border:1px solid var(--line);background:var(--chip)}
-.fhead .back{margin-top:0}
 .fhead .sum{margin:4px 0 0}
 .gear{position:absolute;top:50%;transform:translateY(-50%);inset-inline-end:62px;width:44px;height:44px;border-radius:50%;border:0;background:transparent;color:var(--mute);display:grid;place-items:center;cursor:pointer;padding:0}
 .gear:hover,.gear:focus-visible{color:var(--ink);background:var(--line)}
@@ -196,11 +195,11 @@ body.pred .pre{display:block}
   </section>
   <section id="lib">
     <div class="sum hi"><span id="hello"></span><button class="meic hidden" id="meIcon" aria-label="내 정보" title="내 정보"><svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm0 14a8 8 0 0 1-6.14-2.88 9.95 9.95 0 0 1 12.28 0A8 8 0 0 1 12 20z"/></svg></button></div>
+    <button class="back hidden" id="fBack">← 전체 목록</button>
     <div class="row" style="margin-top:10px"><button class="btn main hidden" id="addBtn">+ 새 대본 추가</button><button class="btn hidden" id="newFld">+ 새 폴더</button><button class="btn hidden" id="inboxBtn">알림</button><button class="btn" id="bkBtn">백업</button><button class="btn" id="meBtn">내 정보</button><button class="btn hidden" id="trBtn">휴지통</button></div>
     <p class="hint hidden" id="guestHint"></p>
     <div class="inbox hidden" id="inbox" role="region" aria-label="공유 알림"></div>
     <div class="fhead hidden" id="fHead">
-      <button class="back" id="fBack">← 전체 목록</button>
       <div class="sum"><h2 id="fTitleH"></h2><span id="fInfo"></span></div>
       <div class="row hidden" id="fLeaveRow" style="margin-top:10px"><button class="btn" id="fLeave">내 목록에서 빼기</button></div>
     </div>
@@ -670,7 +669,7 @@ function renderLib(){
   if(B.folder&&!fOf(B.folder))B.folder=null;
   const F=fOf(B.folder);
   if(!$('#lib').classList.contains('hidden'))setRoute(F?'folder='+F.id:'');
-  show('#newFld',canAddHere&&B.remote&&!F);show('#fHead',!!F);
+  show('#newFld',canAddHere&&B.remote&&!F);show('#fHead',!!F);show('#fBack',!!F);
   if(F){$('#fTitleH').textContent=F.title;$('#fInfo').textContent=folderInfo(F);show('#fLeaveRow',!!F.shared_with_me&&!myFolder(F))}
   const el=$('#sets');
   if(noSpace){show('#langBar',false);
