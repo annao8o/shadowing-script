@@ -59,7 +59,8 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
   (sha256 of random token), `sets`, `shares` (partial-visibility invites: pending/accepted/declined).
 - Spaces (`spaces`, `space_members`; `sets.space_id`, `folders.space_id`): every set and folder lives in one space,
   and **only members of that space can see it** (`naskah_member` inside `naskah_visible`/`naskah_folder_visible`);
-  signed-out visitors see nothing. Only the admin key creates or edits spaces (`save_space`); people join with the
+  signed-out visitors see nothing, except that a space with `guest_ok` (admin switch) shows its public sets/folders
+  to everyone, read-only (`naskah_guest_space`). Only the admin key creates or edits spaces (`save_space`); people join with the
   space's join code (`join_space`, throttled). Sign-up needs no code (`settings.join_code` stays null). Partial
   sharing and `find_users` only reach members of the same space. The client loads every space's sets at once
   (`list_sets` returns `space_id`) and shows the current one (`B.space`, `applySpace`).
@@ -76,7 +77,7 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
 - Custom auth (not Supabase Auth): `sign_up`, `sign_in`, `sign_out`, `me`, `set_name`, `change_password`,
   `admin_reset_password`. The client keeps the session token in localStorage (`naskah.session`).
 - Visibility: `public` (every member of the space), `partial` (owner + accepted shares),
-  `private` (owner), all within the set's space. `naskah_visible()` is the single rule; `list_sets(null)` returns nothing.
+  `private` (owner), all within the set's space. `naskah_visible()` is the single rule; `list_sets(null)` returns only public sets of `guest_ok` spaces.
 - Admin = whoever knows the admin key (stored as a hash in `settings`); it is passed as `p_admin`.
 - Audio files: public Storage bucket `audio`, random UUID names. Uploads are open to the anon key
   (known gap: not tied to login).
