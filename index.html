@@ -560,7 +560,8 @@ async function load(){
   if(loading)return;loading=true;
   try{
     const tok=B.session||null;
-    const [{data,error},fr,sr]=await Promise.all([sb.rpc('list_sets',{p_token:tok}),sb.rpc('list_folders',{p_token:tok}),sb.rpc('list_spaces',{p_token:tok,p_admin:adminArg()})]);
+    const cs=getCodes();
+    const [{data,error},fr,sr]=await Promise.all([sb.rpc('list_sets',{p_token:tok,p_codes:cs}),sb.rpc('list_folders',{p_token:tok,p_codes:cs}),sb.rpc('list_spaces',{p_token:tok,p_admin:adminArg(),p_codes:cs})]);
     if(error){if(isAuthErr(error)){loading=false;logout(true);return}throw error}
     B.rawSets=data||[];B.rawFolders=fr&&!fr.error&&Array.isArray(fr.data)?fr.data:[];B.spaces=sr&&!sr.error&&Array.isArray(sr.data)?sr.data:[];
     applySpace();if($('#note').textContent.startsWith('목록을'))note('');libCb&&libCb();
@@ -571,7 +572,22 @@ async function load(){
 // only the current space's sets and folders are shown
 const mySpaces=()=>B.spaces.filter(x=>x.member);
 // spaces this person can look at: their own, plus ones the admin opened to visitors (public sets only)
-const viewSpaces=()=>B.spaces.filter(x=>x.member||x.guest);
+const viewSpaces=()=>B.spaces.filter(x=>x.member||x.by_code);
+// join codes entered on this device: guests see those spaces' public sets; on login they become memberships
+function getCodes(){try{const a=JSON.parse(pref.get('codes','[]'));return Array.isArray(a)?a.filter(x=>typeof x==='string').slice(0,20):[]}catch(e){return[]}}
+function addCode(c){const k=c.trim().toLowerCase(),a=getCodes().filter(x=>x!==k);a.unshift(k);pref.set('codes',JSON.stringify(a.slice(0,20)))}
+function dropCode(c){const k=c.trim().toLowerCase();pref.set('codes',JSON.stringify(getCodes().filter(x=>x!==k)))}
+const CODE_ERR={too_many:'틀린 코드가 너무 많이 들어와 잠시 막혔어요. 조금 뒤에 다시 해 주세요.',bad_code:'참여 코드가 맞지 않아요. 대소문자와 띄어쓰기를 확인해 주세요.'};
+// enter a space with a code: signed in -> become a member; not signed in -> remember the code and look around
+async function enterCode(c,say){
+  c=(c||'').trim();if(!c){say('참여 코드를 적어 주세요.');return false}
+  say('확인하는 중…');
+  let r;try{r=B.session?await sb.rpc('join_space',{p_token:B.session,p_code:c}):await sb.rpc('check_code',{p_code:c})}catch(e){r=null}
+  if(!r||r.error||!r.data){say('서버에 연결하지 못했어요. 다시 시도해 주세요.');return false}
+  const d=r.data;if(d.error){if(d.error==='auth'){logout(true);return false}say(CODE_ERR[d.error]||CODE_ERR.bad_code);return false}
+  addCode(c);say('');await reloadLib();switchSpace(d.id);goLib();scrollTo(0,0);
+  note(B.session?`‘${d.name}’ 공간에 들어왔어요.`:`‘${d.name}’ 공간에 들어왔어요. 로그인하면 멤버가 되어 스크립트를 올리고 공유받을 수 있어요.`);return true
+}
 const isMember=id=>!!id&&B.spaces.some(x=>x.id===id&&x.member);
 const spaceOf=id=>B.spaces.find(x=>x.id===id)||null;
 function applySpace(){
@@ -665,7 +681,7 @@ function renderLib(){
   const canAddHere=B.remote?!!B.session&&isMember(B.space):B.canAdd;
   show('#addBtn',canAddHere);
   show('#guestHint',B.remote&&!!B.space&&!isMember(B.space));
-  $('#guestHint').textContent=B.session?'둘러보는 중이에요. 전체 공개 스크립트만 보여요. 참여 코드를 넣으면 이 공간의 멤버가 되어 스크립트를 올릴 수 있어요.':'로그인 없이 둘러보는 중이에요. 전체 공개 스크립트만 보여요. 가입하고 참여 코드를 넣으면 더 많은 스크립트를 보고 올릴 수 있어요.';
+  $('#guestHint').textContent=B.session?'이 공간의 멤버가 아니라 전체 공개 스크립트만 보여요. 위쪽 공간 버튼에서 참여 코드를 다시 넣으면 멤버가 돼요.':'로그인 없이 보는 중이에요. 전체 공개 스크립트만 보여요. 로그인하면 이 공간의 멤버가 되어 스크립트를 올리고 공유받을 수 있어요.';
   const tn=B.all.filter(s=>s.deletedAt&&canModify(s)).length;show('#trBtn',tn>0);$('#trBtn').textContent='휴지통 '+tn;
   if(!$('#trash').classList.contains('hidden'))renderTrash();
   if(B.folder&&!fOf(B.folder))B.folder=null;
@@ -675,8 +691,9 @@ function renderLib(){
   if(F){$('#fTitleH').textContent=F.title;$('#fInfo').textContent=folderInfo(F);show('#fLeaveRow',!!F.shared_with_me&&!myFolder(F))}
   const el=$('#sets');
   if(noSpace){show('#langBar',false);
-    el.innerHTML=B.session?'<li class="empty-l">아직 들어간 공간이 없어요. 공간을 알려 준 사람에게 참여 코드를 받아 넣어 주세요.<div class="row" style="justify-content:center"><button class="btn main" data-act="spjoin">참여 코드 넣기</button></div></li>'
-      :'<li class="empty-l">로그인하고 참여 코드를 넣으면 공간의 스크립트를 볼 수 있어요.<div class="row" style="justify-content:center"><button class="btn main" data-act="login">로그인 · 회원가입</button></div></li>';return}
+    el.innerHTML=`<li class="empty-l"><b style="color:var(--ink)">참여 코드를 넣어 공간에 들어가 주세요.</b><br>공간을 알려 준 사람에게 받은 코드예요.
+<div class="file" style="justify-content:center;margin-top:12px"><input class="inp" id="libCode" style="flex:1;min-width:9em;max-width:16em" placeholder="참여 코드" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="참여 코드"><button class="btn main" data-act="code">입장</button></div>
+<div id="libCodeMsg" class="bkmsg" role="status"></div></li>`;return}
   const pool=F?B.lib.filter(s=>s.folder===F.id):B.lib.filter(s=>!inFolder(s));
   const folders=F?[]:B.folders;
   if(!pool.length&&!folders.length){show('#langBar',false);
@@ -691,7 +708,8 @@ function renderLib(){
   el.innerHTML=fShown.map(folderRow).join('')+shown.map(setRow).join('')||'<li class="empty-l">이 언어로 된 스크립트가 없어요.</li>';
 }
 $('#langBar').addEventListener('click',e=>{const b=e.target.closest('.sc');if(!b)return;pref.set('langf',b.dataset.l||'');renderLib()});
-$('#sets').addEventListener('click',e=>{const ab=e.target.closest('button[data-act]');if(ab){if(ab.dataset.act==='spjoin')openSpaces();else if(ab.dataset.act==='login')showAuth();return}
+$('#sets').addEventListener('keydown',e=>{if(e.target.id==='libCode'&&e.key==='Enter'){e.preventDefault();const b=$('#sets button[data-act="code"]');if(b)b.click()}});
+$('#sets').addEventListener('click',e=>{const ab=e.target.closest('button[data-act]');if(ab){const a=ab.dataset.act;if(a==='code'){ab.disabled=true;enterCode($('#libCode').value,t=>{const m=$('#libCodeMsg');if(m)m.textContent=t}).finally(()=>{ab.disabled=false})}else if(a==='login')showAuth();return}
   const fg=e.target.closest('.gear[data-fcfg]');if(fg){openFolderForm(fOf(fg.dataset.fcfg));return}
   const g=e.target.closest('.gear[data-cfg]');if(g){const s=B.lib.find(x=>x.id===g.dataset.cfg);if(s)openEdit(s);return}
   const fb=e.target.closest('.set[data-fid]');if(fb){B.folder=fb.dataset.fid;renderLib();scrollTo(0,0);return}const b=e.target.closest('.set');if(!b)return;const s=B.lib.find(x=>x.id===b.dataset.id);if(s)openSet(s)});
@@ -1214,35 +1232,28 @@ function openSpaces(){if(!B.remote)return;
   stop();for(const id of ['#lib','#practice','#setup','#fldForm','#bk','#trash','#me','#bar'])show(id,false);show('#spaces',true);spEdit=null;spMsg('');$('#spCode').value='';renderSpaces();scrollTo(0,0)}
 function renderSpaces(){
   const my=viewSpaces();
-  $('#spList').innerHTML=my.length?my.map(x=>`<li><button class="sp" data-sp="${esc(x.id)}" aria-current="${x.id===B.space}"><span>${esc(x.name)}<br><small>${x.member?`멤버 ${+x.members||0}명`:'둘러보기 · 전체 공개만 보여요'}${x.id===B.space?' · 지금 보는 공간':''}</small></span>${x.id===B.space?'<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>':''}</button></li>`).join('')
+  $('#spList').innerHTML=my.length?my.map(x=>`<li><button class="sp" data-sp="${esc(x.id)}" aria-current="${x.id===B.space}"><span>${esc(x.name)}<br><small>${x.member?`멤버 ${+x.members||0}명`:'로그인 없이 보는 중 · 전체 공개만 보여요'}${x.id===B.space?' · 지금 보는 공간':''}</small></span>${x.id===B.space?'<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>':''}</button></li>`).join('')
     :'<li class="empty-l">아직 들어간 공간이 없어요. 아래에 참여 코드를 넣어 주세요.</li>';
-  $('#spJoin').textContent=B.session?'들어가기':'로그인하고 들어가기';
   show('#spAdmin',B.admin);if(!B.admin)return;
-  const row=x=>spEdit===(x?x.id:'new')?`<div class="spadm" data-id="${x?esc(x.id):''}"><input class="inp" data-f="name" maxlength="40" placeholder="공간 이름 (예: 인도네시아어 1반)" value="${x?esc(x.name):''}" aria-label="공간 이름"><input class="inp" data-f="code" maxlength="40" placeholder="참여 코드 (4자 이상)" value="${x?esc(x.join_code||''):''}" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="참여 코드"><label class="chk"><input type="checkbox" data-f="guest"${x&&x.guest?' checked':''}> 로그인 없이 보기 (전체 공개 스크립트만, 보기만 가능)</label><div class="file"><button class="btn main" data-a="save">저장</button><button class="btn" data-a="cancel">취소</button></div></div>`
-    :`<div class="spadm" data-id="${esc(x.id)}"><div class="file" style="justify-content:space-between"><span><b>${esc(x.name)}</b><br><small style="color:var(--mute)">참여 코드 <code>${esc(x.join_code||'')}</code> · 멤버 ${+x.members||0}명${x.guest?' · 로그인 없이 보기 켜짐':''}${x.member?'':' · 나는 아직 멤버가 아니에요'}</small></span><button class="btn" data-a="edit">고치기</button></div></div>`;
+  const row=x=>spEdit===(x?x.id:'new')?`<div class="spadm" data-id="${x?esc(x.id):''}"><input class="inp" data-f="name" maxlength="40" placeholder="공간 이름 (예: 인도네시아어 1반)" value="${x?esc(x.name):''}" aria-label="공간 이름"><input class="inp" data-f="code" maxlength="40" placeholder="참여 코드 (6자 이상)" value="${x?esc(x.join_code||''):''}" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="참여 코드"><div class="file"><button class="btn main" data-a="save">저장</button><button class="btn" data-a="cancel">취소</button></div></div>`
+    :`<div class="spadm" data-id="${esc(x.id)}"><div class="file" style="justify-content:space-between"><span><b>${esc(x.name)}</b><br><small style="color:var(--mute)">참여 코드 <code>${esc(x.join_code||'')}</code> · 멤버 ${+x.members||0}명${x.member?'':' · 나는 아직 멤버가 아니에요'}</small></span><button class="btn" data-a="edit">고치기</button></div></div>`;
   $('#spAdmList').innerHTML=B.spaces.map(row).join('')+(spEdit==='new'?row(null):'')||'<p class="hint">아직 공간이 없어요. ‘+ 새 공간’으로 만들어 주세요.</p>';
   show('#spNew',spEdit!=='new');
 }
 $('#spBtn').onclick=openSpaces;
 $('#spClose').onclick=goLib;
 $('#spList').addEventListener('click',e=>{const b=e.target.closest('button[data-sp]');if(!b)return;switchSpace(b.dataset.sp);goLib();scrollTo(0,0)});
-$('#spJoin').onclick=async()=>{if(!B.session){showAuth('참여 코드를 넣으려면 먼저 로그인해 주세요. 처음이면 회원가입을 눌러 주세요.');return}
-  const c=$('#spCode').value.trim();if(!c){spMsg('참여 코드를 적어 주세요.');return}
-  $('#spJoin').disabled=true;spMsg('확인하는 중…');
-  try{const {data,error}=await sb.rpc('join_space',{p_token:B.session,p_code:c});
-    if(error||!data){spMsg('서버에 연결하지 못했어요. 다시 시도해 주세요.');return}
-    if(data.error){if(data.error==='auth'){logout(true);return}spMsg(data.error==='too_many'?'코드를 여러 번 틀렸어요. 10분 뒤에 다시 해 주세요.':'참여 코드가 맞지 않아요. 대소문자와 띄어쓰기를 확인해 주세요.');return}
-    $('#spCode').value='';await reloadLib();switchSpace(data.id);goLib();scrollTo(0,0);note(`‘${data.name}’ 공간에 들어왔어요.`)}
-  finally{$('#spJoin').disabled=false}};
+$('#spJoin').onclick=async()=>{$('#spJoin').disabled=true;try{if(await enterCode($('#spCode').value,spMsg))$('#spCode').value=''}finally{$('#spJoin').disabled=false}};
 $('#spCode').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#spJoin').click()}});
 $('#spNew').onclick=()=>{spEdit='new';spMsg('');renderSpaces();const i=$('#spAdmList input[data-f="name"]');if(i)i.focus()};
 $('#spAdmList').addEventListener('click',async e=>{const b=e.target.closest('button[data-a]');if(!b)return;const box=b.closest('.spadm'),id=box.dataset.id||null,a=b.dataset.a;
   if(a==='edit'){spEdit=id;spMsg('');renderSpaces();return}
   if(a==='cancel'){spEdit=null;spMsg('');renderSpaces();return}
-  const name=box.querySelector('[data-f="name"]').value.trim(),code=box.querySelector('[data-f="code"]').value.trim(),guest=box.querySelector('[data-f="guest"]').checked;
-  if(!name){spMsg('공간 이름을 적어 주세요.');return}if(code.length<4){spMsg('참여 코드는 4자 이상으로 정해 주세요.');return}
+  const name=box.querySelector('[data-f="name"]').value.trim(),code=box.querySelector('[data-f="code"]').value.trim(),cur=B.spaces.find(x=>x.id===id);
+  if(!name){spMsg('공간 이름을 적어 주세요.');return}
+  if(code.length<6&&!(cur&&(cur.join_code||'').toLowerCase()===code.toLowerCase())){spMsg('참여 코드는 6자 이상으로 정해 주세요. 짧으면 다른 사람이 맞히기 쉬워요.');return}
   b.disabled=true;
-  try{const {data,error}=await sb.rpc('save_space',{p_token:B.session,p_admin:adminArg(),p_id:id,p_name:name,p_code:code,p_guest:guest});
+  try{const {data,error}=await sb.rpc('save_space',{p_token:B.session,p_admin:adminArg(),p_id:id,p_name:name,p_code:code});
     if(error||!data){spMsg('저장하지 못했어요. 다시 시도해 주세요.');return}
     if(data.error){spMsg(data.error==='code_taken'?'다른 공간이 이미 쓰는 참여 코드예요. 다른 코드로 정해 주세요.':data.error==='forbidden'?'관리자 모드를 다시 켜 주세요.':'이름과 참여 코드를 확인해 주세요.');return}
     spEdit=null;await reloadLib();if(!id)switchSpace(data.id);renderSpaces();spMsg(id?'저장했어요.':`‘${name}’ 공간을 만들었어요. 참여 코드를 함께할 사람들에게 알려 주세요.`)}
@@ -1281,6 +1292,7 @@ $('#authForm').addEventListener('submit',async e=>{
 });
 async function loggedIn(d){
   B.session=pref.get('session','');B.me=d.id;B.login=d.login;B.name=d.name;B.canAdd=true;
+  for(const c of getCodes()){try{const {data}=await sb.rpc('join_space',{p_token:B.session,p_code:c});if(data&&data.error==='bad_code')dropCode(c)}catch(e){}}
   accountUI();show('#auth',false);const next=afterLogin;afterLogin='';goLib();if(next==='add')openForm();
   const old=pref.get('token','');
   if(old){try{const {data}=await sb.rpc('claim_sets',{p_token:B.session,p_key:old});if(data>0)note(`이 기기에서 예전에 올린 세트 ${data}개를 내 계정으로 옮겼어요.`)}catch(e){}pref.set('token','')}
