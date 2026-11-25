@@ -93,6 +93,7 @@ body.edit .ed{display:flex}
 .set{display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;border:1px solid var(--line);background:var(--card);cursor:pointer;width:100%;text-align:start}
 .set b{display:block;font-size:17px;overflow-wrap:anywhere}
 .set small{color:var(--mute);font-size:13.5px}
+.set small.m2{display:block;margin-top:2px}
 .set .go{margin-inline-start:auto;flex:none;width:40px;height:40px;border-radius:50%;background:var(--red);color:#fff;display:grid;place-items:center}
 .sets li{position:relative}
 .sets li.cfg .set>.tt{padding-inline-end:52px}
@@ -657,7 +658,7 @@ function folderRow(f){const own=myFolder(f),n=B.lib.filter(x=>x.folder===f.id).l
   return `<li${own?' class="cfg"':''}><button class="set" data-fid="${esc(f.id)}"><span class="fic"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${FOLDER}</svg></span><span class="tt"><b>${esc(f.title)}</b><small>${info}${info?' · ':''}스크립트 ${n}개</small></span><span class="go gr"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">${CHEV}</svg></span></button>${own?`<button class="gear" data-fcfg="${esc(f.id)}" aria-label="‘${esc(f.title)}’ 폴더 설정" title="폴더 설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GEAR}</svg></button>`:''}</li>`}
 function setRow(s){const its=parseScript(s.script,s.mode||'auto');const sp=new Set((s.spk&&s.spk.length===its.length?s.spk:its.map(i=>i.sp)).flatMap(spkList));
   const who=whoOf(s),cfg=canModify(s);
-  return `<li${cfg?' class="cfg"':''}><button class="set" data-id="${esc(s.id)}"><span class="tt"><b>${esc(s.title||'제목 없음')}</b><small><span class="lt">${esc(langName(s.lang))}</span>${who}${its.length}개 멘트${sp.size?' · 화자 '+sp.size+'명':''} · ${s.tts?'기계 음성':'녹음 '+fmt(s.dur)}</small></span><span class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">${PLAY}</svg></span></button>${cfg?`<button class="gear" data-cfg="${esc(s.id)}" aria-label="‘${esc(s.title||'제목 없음')}’ 세트 설정" title="세트 설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GEAR}</svg></button>`:''}</li>`}
+  return `<li${cfg?' class="cfg"':''}><button class="set" data-id="${esc(s.id)}"><span class="tt"><b>${esc(s.title||'제목 없음')}</b><small><span class="lt">${esc(langName(s.lang))}</span>${who.replace(/ · $/,'')}</small><small class="m2">${its.length}개 멘트${sp.size?' · 화자 '+sp.size+'명':''} · ${s.tts?'기계 음성':'녹음 '+fmt(s.dur)}</small></span><span class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">${PLAY}</svg></span></button>${cfg?`<button class="gear" data-cfg="${esc(s.id)}" aria-label="‘${esc(s.title||'제목 없음')}’ 세트 설정" title="세트 설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GEAR}</svg></button>`:''}</li>`}
 function renderLib(){
   const noSpace=B.remote&&!B.space;
   const canAddHere=B.remote?!!B.session&&isMember(B.space):B.canAdd;
