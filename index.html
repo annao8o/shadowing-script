@@ -585,6 +585,7 @@ function applySpace(){
 }
 function spaceUI(){
   const on=B.remote&&(!!B.session||viewSpaces().length>0);show('#spBtn',on);
+  show('#bkBtn',!B.remote||!!B.session);
   const sp=spaceOf(B.space);$('#spName').textContent=sp?sp.name:'공간 들어가기';
 }
 function switchSpace(id){if(id===B.space)return;B.space=id;B.folder=null;pref.set('space',id);applySpace()}
@@ -1061,7 +1062,7 @@ $('#trBack').onclick=goLib;
 
 /* ---------- backup ---------- */
 function bkMsg(t){$('#bkMsg').textContent=t||''}
-$('#bkBtn').onclick=()=>{show('#lib',false);show('#bk',true);show('#bkInL',B.canAdd);bkMsg('')};
+$('#bkBtn').onclick=()=>{if(B.remote&&!B.session){showAuth('백업하려면 로그인해 주세요.');return}show('#lib',false);show('#bk',true);show('#bkInL',B.canAdd);bkMsg('')};
 $('#bkClose').onclick=goLib;
 const KEEP=['fmt','title','script','mode','tts','segs','spk','pr','dur','name','lang','visibility','createdAt','updatedAt','deletedAt'];
 $('#bkSave').onclick=async()=>{
