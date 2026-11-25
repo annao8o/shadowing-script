@@ -958,7 +958,28 @@ function speak(){
   S.resting=false;S.t0=performance.now();S.playing=true;mark();
   SY.speak(ut);
 }
-function playCur(){if(S.tts){speak();return}const n=S.segs[S.cur];startSeg(n.s,n.e)}
+// Where the voice of line i really stops. Saved ends sit in the pause after a line (up to 0.3s), so with a short
+// pause or a soft start of the next line (breath, s/h) they can land on the next line's first sound. At play time,
+// pull such an end back to the quietest point before it and stop 0.12s after the last sound. Saved segments stay.
+let lvl=null;
+function levels(){if(lvl&&lvl.pk===S.pk)return lvl;const a=Array.from(S.pk).sort((x,y)=>x-y),q=p=>a[Math.min(a.length-1,Math.floor(a.length*p))];
+  const lo=q(.1),hi=q(.95);lvl={pk:S.pk,thr:Math.max(lo*2.5,lo+0.06*(hi-lo))};return lvl}
+function playEnd(i){
+  const g=S.segs[i],pk=S.pk,h=S.hop;if(!g||!pk||!h)return g&&g.e;
+  const thr=levels().thr,n=pk.length;
+  const loud=f=>{let m=0;for(let k=f-1;k<=f+1;k++)if(k>=0&&k<n&&pk[k]>m)m=pk[k];return m};
+  const minF=Math.floor(g.s/h)+Math.round(0.3/h);let fe=Math.min(n-1,Math.floor(g.e/h));
+  const next=S.segs[i+1];
+  if(next&&next.s<g.e+0.3&&loud(fe)>thr){
+    let best=fe,bv=loud(fe);
+    for(let f=fe-1;f>=Math.max(minF,fe-Math.round(0.5/h));f--){const v=loud(f);if(v<bv){bv=v;best=f}if(v<=thr)break}
+    if(bv<loud(fe)*0.6)fe=best;
+  }
+  let f=fe;while(f>minF&&loud(f)<=thr)f--;
+  const e=Math.min(g.e,(f+1)*h+0.12);
+  return e>g.s+0.2?e:g.e;
+}
+function playCur(){if(S.tts){speak();return}const n=S.segs[S.cur];startSeg(n.s,playEnd(S.cur))}
 function tick(){cancelAnimationFrame(raf);const f=()=>{if(!S.playing)return;if(au.currentTime>=S.stopAt-0.01){segEnd();return}draw();raf=requestAnimationFrame(f)};raf=requestAnimationFrame(f)}
 au.addEventListener('timeupdate',()=>{if(!S.tts&&S.playing&&!S.resting&&au.currentTime>=S.stopAt-0.01)segEnd()});
 au.addEventListener('ended',()=>{if(!S.tts&&S.playing&&!S.resting)segEnd()});

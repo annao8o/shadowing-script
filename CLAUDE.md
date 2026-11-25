@@ -89,6 +89,9 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
   page (DOM), not `page.evaluate("S…")`.
 - Clip playback stops via `armStop()` (a timer that re-arms closer to the end), not animation frames, which browsers
   throttle in the background; keep it that way or clips run into the next line.
+- At play time `playEnd(i)` trims a clip to its voice: if the saved end sits on sound right before the next line it
+  is pulled back to the quietest point, and trailing silence is cut to 0.12s. Saved `segs` are not changed;
+  `playRange` (구간 수정 previews) plays the saved values exactly.
 - Keep user-facing text in plain, friendly Korean (해요체), matching the existing copy.
 - Mobile first: 44px touch targets, layout checked at 390px wide.
 - Don't put the Supabase `service_role`/secret key anywhere in this repo; only the anon/publishable key.
