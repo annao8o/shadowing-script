@@ -85,6 +85,10 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
 ## Conventions
 
 - Escape every value from the server, a file or a user with `esc()` before it goes into HTML.
+- The app script is wrapped in a block `{ … }`, so `S`, `B` and friends are **not** on `window`; UI tests must check the
+  page (DOM), not `page.evaluate("S…")`.
+- Clip playback stops via `armStop()` (a timer that re-arms closer to the end), not animation frames, which browsers
+  throttle in the background; keep it that way or clips run into the next line.
 - Keep user-facing text in plain, friendly Korean (해요체), matching the existing copy.
 - Mobile first: 44px touch targets, layout checked at 390px wide.
 - Don't put the Supabase `service_role`/secret key anywhere in this repo; only the anon/publishable key.

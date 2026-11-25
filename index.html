@@ -522,7 +522,7 @@ let ROUTE0=location.hash;
 function setRoute(r){const h=r?'#'+r:'';if(location.hash===h)return;try{history.replaceState(null,'',h||location.pathname+location.search)}catch(e){}}
 const B={spaces:[],space:null,rawSets:[],rawFolders:[],folders:[],folder:null,inbox:[],remote:false,session:'',me:null,login:'',name:'',admin:false,adminKey:'',canAdd:false,needCode:false,all:[],lib:[]};
 function setAll(arr){B.all=sortLib(arr);B.lib=B.all.filter(s=>!s.deletedAt)}
-const SY=window.speechSynthesis;let voices=[],raf=0;
+const SY=window.speechSynthesis;let voices=[],raf=0,stopT=0;
 const show=(id,on)=>$(id).classList.toggle('hidden',!on);
 const pressed=id=>$(id).getAttribute('aria-pressed')==='true';
 function msg(t){$('#msg').textContent=t||''}
@@ -937,13 +937,13 @@ function loadVoices(){
   if(keep&&voices[+keep])sel.value=keep;
 }
 if(SY){loadVoices();try{SY.addEventListener('voiceschanged',loadVoices)}catch(e){SY.onvoiceschanged=loadVoices}}
-function stop(){S.tok++;if(SY)try{SY.cancel()}catch(e){}clearTimeout(S.timer);cancelAnimationFrame(raf);try{au.pause()}catch(e){}S.playing=false;S.resting=false;S.temp=false}
+function stop(){S.tok++;if(SY)try{SY.cancel()}catch(e){}clearTimeout(S.timer);clearTimeout(stopT);cancelAnimationFrame(raf);try{au.pause()}catch(e){}S.playing=false;S.resting=false;S.temp=false}
 function startSeg(s,e){
   if(!au.getAttribute('src'))return;
   S.stopAt=e;S.resting=false;S.t0=performance.now();
   au.playbackRate=+$('#speed').value;
   try{au.preservesPitch=true;au.webkitPreservesPitch=true}catch(x){}
-  const go=()=>{try{au.currentTime=s}catch(x){}const p=au.play();if(p&&p.catch)p.catch(()=>{stop();mark()});S.playing=true;mark();tick()};
+  const go=()=>{try{au.currentTime=s}catch(x){}const p=au.play();if(p&&p.catch)p.catch(()=>{stop();mark()});S.playing=true;mark();tick();armStop()};
   if(au.readyState>=1)go();else au.addEventListener('loadedmetadata',go,{once:true});
 }
 function speak(){
@@ -962,9 +962,15 @@ function playCur(){if(S.tts){speak();return}const n=S.segs[S.cur];startSeg(n.s,n
 function tick(){cancelAnimationFrame(raf);const f=()=>{if(!S.playing)return;if(au.currentTime>=S.stopAt-0.01){segEnd();return}draw();raf=requestAnimationFrame(f)};raf=requestAnimationFrame(f)}
 au.addEventListener('timeupdate',()=>{if(!S.tts&&S.playing&&!S.resting&&au.currentTime>=S.stopAt-0.01)segEnd()});
 au.addEventListener('ended',()=>{if(!S.tts&&S.playing&&!S.resting)segEnd()});
+// Stop the clip on time with a self-tightening timer. Animation frames alone are slowed or paused when the
+// screen is locked, the app is in the background or the phone saves power, which let clips run into the next line.
+function armStop(){clearTimeout(stopT);if(!S.playing||S.resting||S.tts)return;
+  const left=(S.stopAt-au.currentTime)/(au.playbackRate||1);
+  if(left<=0.012){segEnd();return}
+  stopT=setTimeout(armStop,Math.max(4,Math.min(250,(left-0.03)*1000)))}
 function segEnd(){
   if(S.resting)return;
-  cancelAnimationFrame(raf);if(!S.tts)au.pause();
+  cancelAnimationFrame(raf);clearTimeout(stopT);if(!S.tts)au.pause();
   if(S.temp){S.playing=false;S.temp=false;mark();draw();return}
   const real=Math.max(0.5,(performance.now()-S.t0)/1000),rest=500+(+$('#gap').value)*real*1000;
   const rep=+$('#rep').value;S.left--;
