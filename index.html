@@ -280,7 +280,7 @@ body.pred .pre{display:block}
     <label class="f" for="lang">연습할 언어</label>
     <select id="lang" class="inp" style="border-radius:12px"></select>
     <div id="fldSelWrap" class="hidden"><label class="f" for="fldSel">폴더</label><select id="fldSel" class="inp" style="border-radius:12px"></select><p class="hint hidden" id="fldSelHint"></p></div>
-    <div id="fVisWrap"><label class="f">공유 범위</label><div id="fVis"></div></div>
+    <div id="fVisWrap"><label class="f">공유 범위</label><p class="hint hidden" id="fVisOther" style="margin-top:0"></p><div id="fVis"></div></div>
     <label class="f" for="script">1. 대본 (한 줄에 한 멘트)</label>
     <textarea id="script" placeholder="MC: Selamat pagi, semuanya. | 슬라맛 빠기 | 좋은 아침입니다&#10;Nama saya Joanna.&#10;Hari ini saya akan memperkenalkan penelitian kami."></textarea>
     <div class="file" style="margin-top:8px"><label class="btn" for="txtIn">텍스트 파일 불러오기</label><input type="file" id="txtIn" accept=".txt,text/plain"></div>
@@ -554,6 +554,7 @@ let sb=null,libCb=null,loading=false;
 const hex=a=>[...new Uint8Array(a)].map(x=>x.toString(16).padStart(2,'0')).join('');
 async function sha(t){return hex(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t)))}
 const adminArg=()=>B.admin&&B.adminKey?B.adminKey:null;
+const canVisOf=set=>B.remote&&!!B.session&&!!set&&(set.uid===B.me||B.admin);
 const isAuthErr=e=>!!e&&/\bauth\b/.test(String(e.message||''));
 function rowToSet(r){return{id:r.id,uid:r.owner_id||null,title:r.title,script:r.script,mode:r.mode,fmt:r.fmt,tts:r.tts,segs:r.segs,spk:r.spk,pr:r.pr,dur:r.dur,name:r.name,
   audio:r.audio_path?{path:r.audio_path,mime:r.audio_mime}:null,folder:r.folder_id||null,author:r.author_name||r.author||'',lang:r.lang||'id',visibility:r.visibility||'public',sharedWithMe:!!r.shared_with_me,shareCount:r.share_count,createdAt:Date.parse(r.created_at),updatedAt:Date.parse(r.updated_at),deletedAt:r.deleted_at?Date.parse(r.deleted_at):null}}
@@ -795,8 +796,8 @@ function fillFolderSel(owner,cur){
   $('#fldSel').innerHTML='<option value="">폴더 없음</option>'+mine.map(f=>`<option value="${esc(f.id)}">${esc(f.title)}</option>`).join('');
   $('#fldSel').value=cur&&mine.some(f=>f.id===cur)?cur:'';syncFolderSel();
 }
-function syncFolderSel(){const f=fOf($('#fldSel').value),canVis=EDIT?B.remote&&EDIT.uid===B.me:B.remote;
-  show('#fVisWrap',canVis&&!f);show('#fldSelHint',!!f);if(f)$('#fldSelHint').textContent=`이 폴더의 공개 범위(${visTxt(f.visibility,f.share_count)})를 따라요.`}
+function syncFolderSel(){const fc=folderChoice(),fid=fc!==undefined?fc:EDIT&&EDIT.folder,f=fOf(fid),canVis=EDIT?canVisOf(EDIT):B.remote;
+  show('#fVisWrap',canVis&&!fid);show('#fldSelHint',!!f);if(f)$('#fldSelHint').textContent=`이 폴더의 공개 범위(${visTxt(f.visibility,f.share_count)})를 따라요.`}
 const folderChoice=()=>$('#fldSelWrap').classList.contains('hidden')?undefined:($('#fldSel').value||null);
 function clearForm(){$('#title').value='';$('#script').value='';$('#mode').value='auto';pickBlob=null;$('#fname').textContent='선택된 파일 없음';$('#audIn').value='';$('#toTts').checked=false}
 function formMode(edit){
@@ -805,16 +806,17 @@ function formMode(edit){
   show('#audNow',edit);show('#toTtsL',edit&&!EDIT.tts);
   if(edit)$('#audNow').textContent=EDIT.tts?'지금은 기계 음성 세트예요. 녹음 파일을 고르면 녹음으로 바뀌어요.':'지금 녹음: '+(EDIT.name||'음성 파일')+' ('+fmt(EDIT.dur)+'). 새 파일을 고르면 바뀌고, 멘트 구간은 새로 나눠요.';
 }
-function openForm(){stop();if(wasEdit){clearForm();wasEdit=false}EDIT=null;formMode(false);
+function openForm(){stop();if(wasEdit){clearForm();wasEdit=false}EDIT=null;formMode(false);show('#fVisOther',false);
   $('#lang').value=pref.get('lastLang','id');if(!$('#lang').value)$('#lang').value='id';show('#fVisWrap',B.remote);if(B.remote)fPick.set(pref.get('lastVis','public'),[]);fillFolderSel(B.me,B.folder);show('#lib',false);show('#practice',false);show('#bar',false);show('#setup',true);msg('');
   $('#title').focus()}
 async function openEdit(set){
   if(!canModify(set))return;stop();EDIT=set;wasEdit=true;clearForm();formMode(true);
   $('#title').value=set.title||'';$('#script').value=set.script||'';$('#mode').value=set.mode||'auto';$('#lang').value=set.lang||'id';
-  const own=B.remote&&set.uid===B.me;show('#fVisWrap',own);fillFolderSel(set.uid,set.folder);
+  const own=canVisOf(set);show('#fVisWrap',own);fillFolderSel(set.uid,set.folder);
+  const other=own&&set.uid!==B.me;show('#fVisOther',other);if(other)$('#fVisOther').textContent=`${set.author?'‘'+set.author+'’ 님이':'다른 사람이'} 올린 세트예요. 관리자라서 공개 범위를 바꿀 수 있어요.`;
   show('#lib',false);show('#practice',false);show('#bar',false);show('#setup',true);msg('');scrollTo(0,0);
   if(own){fPick.set(set.visibility,[]);if(set.visibility==='partial'){msg('공유 대상을 불러오는 중…');
-    let us=[];try{const {data}=await sb.rpc('get_shares',{p_token:B.session,p_id:set.id});us=data||[]}catch(e){}
+    let us=[];try{const {data}=await sb.rpc('get_shares',{p_token:B.session,p_id:set.id,p_admin:adminArg()});us=data||[]}catch(e){}
     if(EDIT===set){fPick.set(set.visibility,us);msg('')}}}
 }
 const ordOf=set=>set&&set.fmt!==2?'kp':'pk';
@@ -854,7 +856,7 @@ async function saveEdit(){
   const set=EDIT;if(!set)return;const items=formItems();if(!items)return;
   const toTts=!pickBlob&&(set.tts||$('#toTts').checked);
   if(toTts&&!SY){msg('이 브라우저는 기계 음성을 지원하지 않아요. 녹음 파일을 골라 주세요.');return}
-  const fid=folderChoice(),own=B.remote&&set.uid===B.me,v=own&&!fid?fPick.get():null;
+  const fid=folderChoice(),v=canVisOf(set)&&!(fid!==undefined?fid:set.folder)?fPick.get():null;
   if(v&&v.vis==='partial'&&!v.users.length){msg('일부 공개는 공유할 사람을 한 명 이상 추가해 주세요.');return}
   const script=$('#script').value,mode=$('#mode').value,changed=script!==set.script||mode!==(set.mode||'auto');
   const d={title:title(),lang:$('#lang').value||'id'};
@@ -885,7 +887,7 @@ async function saveEdit(){
       else if(pickBlob){msg('음성 파일을 올리는 중…');const a=await uploadAudio(pickBlob);Object.assign(p,{audio_path:a.path,audio_mime:a.mime})}
       const {error}=await sb.rpc('update_set',{p_id:set.id,p_token:B.session,p,p_admin:adminArg()});
       if(error){const t=String(error.message||'');if(isAuthErr(error)){logout(true);throw{code:'auth'}}throw{code:/too_big|bad_script/.test(t)?'too_big':/forbidden|bad_folder/.test(t)?'forbidden':'save'}}
-      if(v){const {data,error:e2}=await sb.rpc('share_set',{p_token:B.session,p_id:set.id,p_visibility:v.vis,p_users:v.vis==='partial'?v.users.map(x=>x.id):null});
+      if(v){const {data,error:e2}=await sb.rpc('share_set',{p_token:B.session,p_id:set.id,p_visibility:v.vis,p_users:v.vis==='partial'?v.users.map(x=>x.id):null,p_admin:adminArg()});
         if(e2||!data||data.error)note('공유 범위는 저장하지 못했어요. 세트 설정에서 다시 시도해 주세요.')}
       while(loading)await new Promise(r=>setTimeout(r,100));
       await load();

@@ -114,6 +114,16 @@ check(row.tts === true && row.audio_path === null && row.dur === null && row.scr
 check(String(await q(`select update_set($1,$2,'{"script":""}'::jsonb)`, [ed, ja.token])).startsWith('ERR'), 'empty script rejected');
 check(String(await q(`select update_set($1,$2,'{"title":"x"}'::jsonb)`, [ed, bu.token])).startsWith('ERR'), 'other user cannot change settings');
 check(!JSON.stringify(await one('select list_sets($1)', [ja.token])).includes('owner_hash'), 'owner_hash never returned');
+const vis = async (id) => (await one('select list_sets($1)', [ja.token])).find((r) => r.id === id).visibility;
+check((await one('select share_set($1,$2,$3)', [bu.token, ed, 'public'])).error === 'forbidden' && await vis(ed) === 'private', 'other user cannot change visibility');
+check((await one('select share_set($1,$2,$3,null,$4)', [bu.token, ed, 'public', 'wrong'])).error === 'forbidden', 'wrong admin key cannot change visibility');
+check((await one('select share_set($1,$2,$3,null,$4)', [null, ed, 'public', ADMIN])).error === 'auth', 'admin key alone (signed out) cannot change visibility');
+check((await one('select share_set($1,$2,$3,null,$4)', [bu.token, ed, 'public', ADMIN])).ok && await vis(ed) === 'public', 'admin changes visibility of someone else\'s set');
+await one('select share_set($1,$2,$3,$4,$5)', [bu.token, ed, 'partial', [ja.id, bu.id, cy.id], ADMIN]);
+const esh = await one('select get_shares($1,$2,$3)', [bu.token, ed, ADMIN]);
+check(esh.map((u) => u.login).join() === 'budi', 'admin partial share skips the owner and non-members');
+check((await one('select get_shares($1,$2)', [bu.token, ed])).length === 0, 'shares list hidden from others without the admin key');
+check((await one('select share_set($1,$2,$3)', [ja.token, ed, 'private'])).ok && await vis(ed) === 'private', 'owner still changes visibility');
 
 console.log('folders');
 const ids = async (t) => (await one('select list_sets($1)', [t ?? null])).map((r) => r.title);

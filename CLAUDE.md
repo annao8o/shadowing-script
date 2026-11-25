@@ -79,6 +79,8 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
 - Visibility: `public` (every member of the space), `partial` (owner + accepted shares),
   `private` (owner), all within the set's space. `naskah_visible()` is the member rule; `list_sets` also returns public sets of spaces whose codes are passed in `p_codes`.
 - Admin = whoever knows the admin key (stored as a hash in `settings`); it is passed as `p_admin`.
+  `share_set`/`get_shares` take `p_admin` too, so an admin can change any unfiled set's visibility (shares still skip the owner
+  and non-members of the space).
 - Audio files: public Storage bucket `audio`, random UUID names. Uploads are open to the anon key
   (known gap: not tied to login).
 
