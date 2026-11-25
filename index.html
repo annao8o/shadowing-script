@@ -681,7 +681,7 @@ function renderLib(){
   const canAddHere=B.remote?!!B.session&&isMember(B.space):B.canAdd;
   show('#addBtn',canAddHere);
   show('#guestHint',B.remote&&!!B.space&&!isMember(B.space));
-  $('#guestHint').textContent=B.session?'이 공간의 멤버가 아니라 전체 공개 스크립트만 보여요. 위쪽 공간 버튼에서 참여 코드를 다시 넣으면 멤버가 돼요.':'로그인 없이 보는 중이에요. 전체 공개 스크립트만 보여요. 로그인하면 이 공간의 멤버가 되어 스크립트를 올리고 공유받을 수 있어요.';
+  $('#guestHint').textContent=B.session?'이 공간의 멤버가 아니라 전체 공개 스크립트만 보여요. 위쪽 공간 버튼에서 참여 코드를 다시 넣으면 멤버가 돼요.':'전체 공개 스크립트만 보여요';
   const tn=B.all.filter(s=>s.deletedAt&&canModify(s)).length;show('#trBtn',tn>0);$('#trBtn').textContent='휴지통 '+tn;
   if(!$('#trash').classList.contains('hidden'))renderTrash();
   if(B.folder&&!fOf(B.folder))B.folder=null;
