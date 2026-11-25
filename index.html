@@ -88,6 +88,7 @@ body.edit .ed{display:flex}
 .hidden{display:none!important}
 @media(max-width:600px){.tx{font-size:17px}.ln{grid-template-columns:30px minmax(0,1fr) 46px;gap:10px;padding:11px}.no{width:30px;height:30px;font-size:13px}.pl{width:46px;height:46px}}
 .inp{width:100%;min-height:44px;border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:0 12px;font-size:16px}
+.gnote{position:static;box-shadow:none}
 .note{margin:16px 0 0;padding:10px 14px;border-radius:12px;background:var(--rose);font-size:14px;position:sticky;top:8px;z-index:6;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08)}
 .sets{list-style:none;margin:12px 0 24px;padding:0;display:grid;gap:8px}
 .set{display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;border:1px solid var(--line);background:var(--card);cursor:pointer;width:100%;text-align:start}
@@ -196,6 +197,7 @@ body.pred .pre{display:block}
     <p class="hint">비밀번호를 잊었다면 사이트 관리자에게 새 비밀번호를 부탁하세요.</p>
   </section>
   <section id="lib">
+    <p class="note gnote hidden" id="guestNote" role="button" tabindex="0">로그인하면 이 공간의 멤버가 되어 스크립트를 올리고 공유받을 수 있어요.</p>
     <div class="sum hi"><button class="back hidden" id="fBack">← 전체 목록</button><span id="hello"></span><button class="meic hidden" id="meIcon" aria-label="내 정보" title="내 정보"><svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm0 14a8 8 0 0 1-6.14-2.88 9.95 9.95 0 0 1 12.28 0A8 8 0 0 1 12 20z"/></svg></button></div>
     <div class="row" style="margin-top:10px"><button class="btn main hidden" id="addBtn">+ 새 대본 추가</button><button class="btn hidden" id="newFld">+ 새 폴더</button><button class="btn hidden" id="inboxBtn">알림</button><button class="btn" id="bkBtn">백업</button><button class="btn" id="meBtn">내 정보</button><button class="btn hidden" id="trBtn">휴지통</button></div>
     <p class="hint hidden" id="guestHint"></p>
@@ -586,7 +588,7 @@ async function enterCode(c,say){
   if(!r||r.error||!r.data){say('서버에 연결하지 못했어요. 다시 시도해 주세요.');return false}
   const d=r.data;if(d.error){if(d.error==='auth'){logout(true);return false}say(CODE_ERR[d.error]||CODE_ERR.bad_code);return false}
   addCode(c);say('');await reloadLib();switchSpace(d.id);goLib();scrollTo(0,0);
-  note(B.session?`‘${d.name}’ 공간에 들어왔어요.`:`‘${d.name}’ 공간에 들어왔어요. 로그인하면 멤버가 되어 스크립트를 올리고 공유받을 수 있어요.`);return true
+  note(`‘${d.name}’ 공간에 들어왔어요.`);return true
 }
 const isMember=id=>!!id&&B.spaces.some(x=>x.id===id&&x.member);
 const spaceOf=id=>B.spaces.find(x=>x.id===id)||null;
@@ -681,6 +683,7 @@ function renderLib(){
   const canAddHere=B.remote?!!B.session&&isMember(B.space):B.canAdd;
   show('#addBtn',canAddHere);
   show('#guestHint',B.remote&&!!B.space&&!isMember(B.space));
+  show('#guestNote',B.remote&&!B.session&&!!B.space);
   $('#guestHint').textContent=B.session?'이 공간의 멤버가 아니라 전체 공개 스크립트만 보여요. 위쪽 공간 버튼에서 참여 코드를 다시 넣으면 멤버가 돼요.':'전체 공개 스크립트만 보여요';
   const tn=B.all.filter(s=>s.deletedAt&&canModify(s)).length;show('#trBtn',tn>0);$('#trBtn').textContent='휴지통 '+tn;
   if(!$('#trash').classList.contains('hidden'))renderTrash();
@@ -1241,6 +1244,8 @@ function renderSpaces(){
   show('#spNew',spEdit!=='new');
 }
 $('#spBtn').onclick=openSpaces;
+$('#guestNote').onclick=()=>showAuth();
+$('#guestNote').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showAuth()}};
 $('#spClose').onclick=goLib;
 $('#spList').addEventListener('click',e=>{const b=e.target.closest('button[data-sp]');if(!b)return;switchSpace(b.dataset.sp);goLib();scrollTo(0,0)});
 $('#spJoin').onclick=async()=>{$('#spJoin').disabled=true;try{if(await enterCode($('#spCode').value,spMsg))$('#spCode').value=''}finally{$('#spJoin').disabled=false}};
