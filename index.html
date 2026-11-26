@@ -62,6 +62,8 @@ select{min-height:44px;border-radius:999px;border:1px solid var(--line);backgrou
 .sum h2{margin:0;font-size:20px}
 .sum span{font-size:14px;color:var(--mute)}
 ol.lines{list-style:none;margin:0 0 20px;padding:0;display:grid;gap:8px}
+.nt{margin:4px 0 0;padding:2px 4px 2px 12px;border-left:3px solid var(--line);color:var(--mute);font-size:15px;line-height:1.5;overflow-wrap:anywhere}
+.nt.off{display:none}
 .ln{display:grid;grid-template-columns:34px minmax(0,1fr) 48px;gap:12px;align-items:start;padding:12px;border-radius:14px;background:var(--card);border:1px solid var(--line);cursor:pointer;transition:background .15s}
 .ln.on{background:var(--rose);border-color:var(--redink)}
 .no{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:14px;font-weight:700;background:var(--chip);font-variant-numeric:tabular-nums}
@@ -223,10 +225,8 @@ body.pred .pre{display:block}
 
   <section class="setup hidden" id="spaces">
     <h2>공간</h2>
-    <p class="hint" style="margin-top:0">공간마다 스크립트와 폴더가 따로 있어요. 같은 공간의 멤버끼리만 볼 수 있어요.</p>
+    <p class="hint" style="margin-top:0" id="spHint">공간마다 스크립트와 폴더가 따로 있어요. 공간을 골라 들어가세요.</p>
     <ul class="splist" id="spList"></ul>
-    <label class="f" for="spCode">참여 코드로 공간 들어가기</label>
-    <div class="file"><input id="spCode" class="inp" style="flex:1;min-width:10em" placeholder="참여 코드" autocomplete="off" autocapitalize="none" spellcheck="false"><button class="btn main" id="spJoin">들어가기</button></div>
     <div id="spAdmin" class="hidden">
       <label class="f">공간 관리 (관리자)</label>
       <div id="spAdmList" style="display:grid;gap:8px"></div>
@@ -287,7 +287,7 @@ body.pred .pre{display:block}
     <label class="f" for="script">1. 대본 (한 줄에 한 멘트)</label>
     <textarea id="script" placeholder="MC: Selamat pagi, semuanya. | 슬라맛 빠기 | 좋은 아침입니다&#10;Nama saya Joanna.&#10;Hari ini saya akan memperkenalkan penelitian kami."></textarea>
     <div class="file" style="margin-top:8px"><label class="btn" for="txtIn">텍스트 파일 불러오기</label><input type="file" id="txtIn" accept=".txt,text/plain"></div>
-    <p class="hint">화자는 <code>이름: 대사</code>처럼 앞에 적으면 자동으로 지정돼요 (나중에 바꿀 수 있어요). 발음과 번역은 <code>대사 | 한글 발음 | 한국어 뜻</code> 순서로 적어요. 인도네시아어·말레이어는 발음 칸을 비우면 (<code>대사 | | 한국어 뜻</code>) 한글 발음이 자동으로 붙어요. 문단으로 붙여 넣었다면 아래에서 ‘문장 단위’를 고르세요.</p>
+    <p class="hint">화자는 <code>이름: 대사</code>처럼 앞에 적으면 자동으로 지정돼요 (나중에 바꿀 수 있어요). 발음과 번역은 <code>대사 | 한글 발음 | 한국어 뜻</code> 순서로 적어요. <code>#</code>으로 시작하는 줄은 음성 없는 메모로 멘트 사이에 보여요. 인도네시아어·말레이어는 발음 칸을 비우면 (<code>대사 | | 한국어 뜻</code>) 한글 발음이 자동으로 붙어요. 문단으로 붙여 넣었다면 아래에서 ‘문장 단위’를 고르세요.</p>
     <label class="f">2. 음성 파일 (대본 전체 녹음) — 없으면 건너뛰세요</label>
     <div class="file"><label class="btn" for="audIn">음성 파일 선택</label><input type="file" id="audIn" accept="audio/*,video/*,.m4a,.mp3,.wav,.aac,.ogg,.webm"><span class="fname" id="fname">선택된 파일 없음</span></div>
     <p class="hint">m4a·mp3 권장 (최대 약 15MB).</p>
@@ -359,9 +359,12 @@ function splitSpeaker(ln){
 function parseScript(text,mode,order){
   const pk=order!=='kp';
   const raw=String(text||'').replace(/\r/g,'').split('\n').map(s=>s.trim()).filter(Boolean);
-  const useSent=mode==='sentence'||(mode==='auto'&&raw.length<2);
-  const items=[];
+  const isNote=l=>l[0]==='#';
+  const useSent=mode==='sentence'||(mode==='auto'&&raw.filter(l=>!isNote(l)).length<2);
+  const items=[],notes=[];
   for(const ln0 of raw){
+    // "# ..." is a note shown between lines: no audio, no number, before the line that follows it
+    if(isNote(ln0)){const t=ln0.replace(/^#+\s*/,'');if(t)notes.push({at:items.length,t});continue}
     const {sp,body:ln}=splitSpeaker(ln0);
     if(useSent&&!/\||\t/.test(ln)){
       const parts=ln.match(/[^.!?…。！？]+[.!?…。！？]+["'”’)\]」』]*|[^.!?…。！？]+$/g)||[ln];
@@ -375,6 +378,7 @@ function parseScript(text,mode,order){
     const L=(body.match(/[\p{L}]/gu)||[]).length,D=(body.match(/\p{N}/gu)||[]).length;
     it.w=Math.max(2,L+D*3)+3;
   }
+  items.notes=notes;
   return items;
 }
 function analyze(chs,sr){
@@ -520,7 +524,7 @@ const GEAR='<path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.5
 const FOLDER='<path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>',CHEV='<path d="M8.6 16.6 13.2 12 8.6 7.4 10 6l6 6-6 6z"/>';
 const PLAY='<path d="M7 4v16l13-8z"/>',PAUSE='<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>';
 const au=$('#au'),cv=$('#cv'),list=$('#list');
-const S={set:null,items:[],segs:[],spk:[],pr:[],filter:null,pk:null,hop:0.01,dur:0,cur:-1,playing:false,left:0,stopAt:0,timer:0,temp:false,resting:false,tts:false,tok:0,t0:0,newSpk:-1};
+const S={set:null,items:[],notes:[],segs:[],spk:[],pr:[],filter:null,pk:null,hop:0.01,dur:0,cur:-1,playing:false,left:0,stopAt:0,timer:0,temp:false,resting:false,tts:false,tok:0,t0:0,newSpk:-1};
 let ROUTE0=location.hash;
 function setRoute(r){const h=r?'#'+r:'';if(location.hash===h)return;try{history.replaceState(null,'',h||location.pathname+location.search)}catch(e){}}
 const B={spaces:[],space:null,rawSets:[],rawFolders:[],folders:[],folder:null,inbox:[],remote:false,session:'',me:null,login:'',name:'',admin:false,adminKey:'',canAdd:false,needCode:false,all:[],lib:[]};
@@ -575,33 +579,23 @@ async function load(){
   if(loading)return;loading=true;
   try{
     const tok=B.session||null;
-    const cs=getCodes();
-    const [{data,error},fr,sr]=await Promise.all([sb.rpc('list_sets',{p_token:tok,p_codes:cs}),sb.rpc('list_folders',{p_token:tok,p_codes:cs}),sb.rpc('list_spaces',{p_token:tok,p_admin:adminArg(),p_codes:cs})]);
+    const [{data,error},fr,sr]=await Promise.all([sb.rpc('list_sets',{p_token:tok}),sb.rpc('list_folders',{p_token:tok}),sb.rpc('list_spaces',{p_token:tok})]);
     if(error){if(isAuthErr(error)){loading=false;logout(true);return}throw error}
     B.rawSets=data||[];B.rawFolders=fr&&!fr.error&&Array.isArray(fr.data)?fr.data:[];B.spaces=sr&&!sr.error&&Array.isArray(sr.data)?sr.data:[];
     applySpace();if($('#note').textContent.startsWith('목록을'))note('');libCb&&libCb();
     loadInbox();
   }catch(e){note('목록을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.')}
   loading=false;
+  if(B.session&&B.space&&!isMember(B.space))joinSpace(B.space);
 }
 // only the current space's sets and folders are shown
 const mySpaces=()=>B.spaces.filter(x=>x.member);
-// spaces this person can look at: their own, plus ones the admin opened to visitors (public sets only)
-const viewSpaces=()=>B.spaces.filter(x=>x.member||x.by_code);
-// join codes entered on this device: guests see those spaces' public sets; on login they become memberships
-function getCodes(){try{const a=JSON.parse(pref.get('codes','[]'));return Array.isArray(a)?a.filter(x=>typeof x==='string').slice(0,20):[]}catch(e){return[]}}
-function addCode(c){const k=c.trim().toLowerCase(),a=getCodes().filter(x=>x!==k);a.unshift(k);pref.set('codes',JSON.stringify(a.slice(0,20)))}
-function dropCode(c){const k=c.trim().toLowerCase();pref.set('codes',JSON.stringify(getCodes().filter(x=>x!==k)))}
-const CODE_ERR={too_many:'틀린 코드가 너무 많이 들어와 잠시 막혔어요. 조금 뒤에 다시 해 주세요.',bad_code:'참여 코드가 맞지 않아요. 대소문자와 띄어쓰기를 확인해 주세요.'};
-// enter a space with a code: signed in -> become a member; not signed in -> remember the code and look around
-async function enterCode(c,say){
-  c=(c||'').trim();if(!c){say('참여 코드를 적어 주세요.');return false}
-  say('확인하는 중…');
-  let r;try{r=B.session?await sb.rpc('join_space',{p_token:B.session,p_code:c}):await sb.rpc('check_code',{p_code:c})}catch(e){r=null}
-  if(!r||r.error||!r.data){say('서버에 연결하지 못했어요. 다시 시도해 주세요.');return false}
-  const d=r.data;if(d.error){if(d.error==='auth'){logout(true);return false}say(CODE_ERR[d.error]||CODE_ERR.bad_code);return false}
-  addCode(c);say('');await reloadLib();switchSpace(d.id);goLib();scrollTo(0,0);
-  note(`‘${d.name}’ 공간에 들어왔어요.`);return true
+// every space is open: anyone sees its public sets; signed-in people become members when they enter it
+const viewSpaces=()=>B.spaces;
+let joinTried='';
+async function joinSpace(id){
+  if(!B.session||!id||isMember(id)||joinTried===id)return;joinTried=id;
+  try{const {data}=await sb.rpc('join_space',{p_token:B.session,p_space:id});if(data&&data.error==='auth'){logout(true);return}if(data&&data.ok)await reloadLib()}catch(e){}
 }
 const isMember=id=>!!id&&B.spaces.some(x=>x.id===id&&x.member);
 const spaceOf=id=>B.spaces.find(x=>x.id===id)||null;
@@ -615,11 +609,11 @@ function applySpace(){
   spaceUI();
 }
 function spaceUI(){
-  const on=B.remote&&(!!B.session||viewSpaces().length>0);show('#spBtn',on);
+  const on=B.remote&&(B.spaces.length>0||B.admin);show('#spBtn',on);
   show('#bkBtn',!B.remote||!!B.session);
-  const sp=spaceOf(B.space);$('#spName').textContent=sp?sp.name:'공간 들어가기';
+  const sp=spaceOf(B.space);$('#spName').textContent=sp?sp.name:'공간';
 }
-function switchSpace(id){if(id===B.space)return;B.space=id;B.folder=null;pref.set('space',id);applySpace()}
+function switchSpace(id){if(id===B.space)return;B.space=id;B.folder=null;pref.set('space',id);applySpace();joinSpace(id)}
 function listen(cb){
   libCb=cb;load();
   if(B.remote){setInterval(()=>{if(!document.hidden&&!S.playing)load()},30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()})}
@@ -695,9 +689,9 @@ function renderLib(){
   const noSpace=B.remote&&!B.space;
   const canAddHere=B.remote?!!B.session&&isMember(B.space):B.canAdd;
   show('#addBtn',canAddHere);
-  show('#guestHint',B.remote&&!!B.space&&!isMember(B.space));
+  show('#guestHint',B.remote&&!!B.space&&!B.session);
   show('#guestNote',B.remote&&!B.session&&!!B.space);
-  $('#guestHint').textContent=B.session?'이 공간의 멤버가 아니라 전체 공개 스크립트만 보여요. 위쪽 공간 버튼에서 참여 코드를 다시 넣으면 멤버가 돼요.':'전체 공개 스크립트만 보여요';
+  $('#guestHint').textContent='전체 공개 스크립트만 보여요';
   const tn=B.all.filter(s=>s.deletedAt&&canModify(s)).length;show('#trBtn',tn>0);$('#trBtn').textContent='휴지통 '+tn;
   if(!$('#trash').classList.contains('hidden'))renderTrash();
   if(B.folder&&!fOf(B.folder))B.folder=null;
@@ -707,9 +701,7 @@ function renderLib(){
   if(F){$('#fTitleH').textContent=F.title;$('#fInfo').textContent=folderInfo(F);show('#fLeaveRow',!!F.shared_with_me&&!myFolder(F))}
   const el=$('#sets');
   if(noSpace){show('#langBar',false);show('#sortSel',false);
-    el.innerHTML=`<li class="empty-l"><b style="color:var(--ink)">참여 코드를 넣어 공간에 들어가 주세요.</b><br>공간을 알려 준 사람에게 받은 코드예요.
-<div class="file" style="justify-content:center;margin-top:12px"><input class="inp" id="libCode" style="flex:1;min-width:9em;max-width:16em" placeholder="참여 코드" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="참여 코드"><button class="btn main" data-act="code">입장</button></div>
-<div id="libCodeMsg" class="bkmsg" role="status"></div></li>`;return}
+    el.innerHTML=`<li class="empty-l">아직 공간이 없어요. ${B.admin?'위쪽 공간 버튼에서 ‘+ 새 공간’으로 만들어 주세요.':'관리자가 공간을 만들면 여기에 나와요.'}</li>`;return}
   const pool=F?B.lib.filter(s=>s.folder===F.id):B.lib.filter(s=>!inFolder(s));
   const folders=F?[]:B.folders;
   if(!pool.length&&!folders.length){show('#langBar',false);show('#sortSel',false);
@@ -726,8 +718,7 @@ function renderLib(){
 }
 $('#sortSel').addEventListener('change',e=>{pref.set('sort',e.target.value);renderLib()});
 $('#langBar').addEventListener('click',e=>{const b=e.target.closest('.sc');if(!b)return;pref.set('langf',b.dataset.l||'');renderLib()});
-$('#sets').addEventListener('keydown',e=>{if(e.target.id==='libCode'&&e.key==='Enter'){e.preventDefault();const b=$('#sets button[data-act="code"]');if(b)b.click()}});
-$('#sets').addEventListener('click',e=>{const ab=e.target.closest('button[data-act]');if(ab){const a=ab.dataset.act;if(a==='code'){ab.disabled=true;enterCode($('#libCode').value,t=>{const m=$('#libCodeMsg');if(m)m.textContent=t}).finally(()=>{ab.disabled=false})}else if(a==='login')showAuth();return}
+$('#sets').addEventListener('click',e=>{const ab=e.target.closest('button[data-act]');if(ab){if(ab.dataset.act==='login')showAuth();return}
   const fg=e.target.closest('.gear[data-fcfg]');if(fg){openFolderForm(fOf(fg.dataset.fcfg));return}
   const g=e.target.closest('.gear[data-cfg]');if(g){const s=B.lib.find(x=>x.id===g.dataset.cfg);if(s)openEdit(s);return}
   const fb=e.target.closest('.set[data-fid]');if(fb){B.folder=fb.dataset.fid;renderLib();scrollTo(0,0);return}const b=e.target.closest('.set');if(!b)return;const s=B.lib.find(x=>x.id===b.dataset.id);if(s)openSet(s)});
@@ -748,7 +739,7 @@ function setAudio(blob){try{if(au.src&&au.src.startsWith('blob:'))URL.revokeObje
 let openTok=0;
 async function openSet(set){
   const my=++openTok;stop();
-  S.set=set;S.lang=set.lang||'id';S.tts=!!set.tts;S.items=parseScript(set.script,set.mode||'auto',set.fmt===2?'pk':'kp');S.cur=-1;S.pk=null;S.dur=set.dur||0;S.filter=null;S.newSpk=-1;
+  S.set=set;S.lang=set.lang||'id';S.tts=!!set.tts;S.items=parseScript(set.script,set.mode||'auto',set.fmt===2?'pk':'kp');S.notes=S.items.notes||[];S.cur=-1;S.pk=null;S.dur=set.dur||0;S.filter=null;S.newSpk=-1;
   S.segs=(set.segs&&set.segs.length===S.items.length)?set.segs.map(g=>({s:+g.s,e:+g.e})):S.items.map(()=>({s:0,e:0}));
   S.spk=(set.spk&&set.spk.length===S.items.length)?set.spk.map(spkList):S.items.map(i=>spkList(i.sp));
   S.pr=(set.pr&&set.pr.length===S.items.length)?set.pr.map(x=>String(x||'')):S.items.map(()=>'');
@@ -873,11 +864,12 @@ async function saveEdit(){
   const fid=folderChoice(),v=canVisOf(set)&&!(fid!==undefined?fid:set.folder)?fPick.get():null;
   if(v&&v.vis==='partial'&&!v.users.length){msg('일부 공개는 공유할 사람을 한 명 이상 추가해 주세요.');return}
   const script=$('#script').value,mode=$('#mode').value,changed=script!==set.script||mode!==(set.mode||'auto');
+  const old=parseScript(set.script,set.mode||'auto',ordOf(set)),sameLines=items.length===old.length&&items.every((it,i)=>it.t===old[i].t);
   const d={title:title(),lang:$('#lang').value||'id'};
   if(B.remote&&fid!==undefined&&fid!==(set.folder||null))d.folder_id=fid;
   if(changed){
     // keep speakers and hand-fixed pronunciations for lines whose text didn't change
-    const old=parseScript(set.script,set.mode||'auto',ordOf(set)),same=a=>a&&a.length===old.length;
+    const same=a=>a&&a.length===old.length;
     const bySp=new Map(),byPr=new Map();old.forEach((it,i)=>{if(!bySp.has(it.t))bySp.set(it.t,same(set.spk)?set.spk[i]:it.sp);if(!byPr.has(it.t)&&same(set.pr)&&set.pr[i])byPr.set(it.t,set.pr[i])});
     Object.assign(d,{script,mode,spk:items.map(it=>it.sp||bySp.get(it.t)||''),pr:items.map(it=>byPr.get(it.t)||'')});
   }
@@ -885,7 +877,7 @@ async function saveEdit(){
   try{
     let blob=null;
     if(toTts){if(!set.tts)Object.assign(d,{tts:true,segs:[],dur:null,name:''})}
-    else if(pickBlob||changed){
+    else if(pickBlob||(changed&&!sameLines)){
       msg(pickBlob?'음성을 분석하는 중… (긴 파일은 몇 초 걸려요)':'바뀐 대본에 맞춰 음성을 다시 나누는 중…');await new Promise(r=>setTimeout(r,30));
       blob=pickBlob||await getAudio(set).catch(()=>null);if(!blob)throw{code:'decode'};
       let an,dur;try{({an,dur}=await decode(blob))}catch(e){throw{code:'decode'}}
@@ -919,22 +911,23 @@ async function saveEdit(){
 function render(){
   renderSpkBar();
   const sp=speakers();
+  const notesAt=k=>S.notes.filter(n=>n.at===k).map(n=>`<li class="nt${S.filter?' off':''}">${esc(n.t)}</li>`).join('');
   list.innerHTML=S.items.map((it,i)=>{const g=S.segs[i]||{s:0,e:0},who=S.spk[i];
     const chips=sp.map((n,k)=>`<button data-act="sp" data-v="${esc(n)}" style="--c:var(--s${k%8})" aria-pressed="${who.includes(n)}">${esc(n)}</button>`).join('')+
       `<button data-act="sp" data-v="" aria-pressed="${!who.length}">없음</button>`+
       (S.newSpk===i?`<input data-act="spin" placeholder="화자 이름" maxlength="24" aria-label="새 화자 이름"><button data-act="spok">추가</button>`:`<button data-act="spnew">+ 새 화자</button>`);
-    return `<li class="ln${i===S.cur?' on':''}${visible(i)?'':' off'}" data-i="${i}">
+    return notesAt(i)+`<li class="ln${i===S.cur?' on':''}${visible(i)?'':' off'}" data-i="${i}">
 <span class="no">${i+1}</span>
 <div>${who.map(n=>`<span class="pill" style="${colorOf(n)}">${esc(n)}</span>`).join('')}<div class="tx">${esc(it.t)}</div><div class="pr">${esc(prOf(i))}</div>${it.ko?`<div class="ko">${esc(it.ko)}</div>`:''}${S.tts?'':`<div class="tm">${fmt(g.s)} – ${fmt(g.e)} · ${(g.e-g.s).toFixed(1)}초</div>`}</div>
 <button class="pl" data-act="play" aria-label="${i+1}번 멘트 듣기"><svg viewBox="0 0 24 24" fill="currentColor">${S.playing&&i===S.cur?PAUSE:PLAY}</svg></button>
 <div class="ed"><span>시작 <button data-act="s-">−</button><button data-act="s+">+</button></span><span>끝 <button data-act="e-">−</button><button data-act="e+">+</button></span></div>
 <div class="spe">${chips}</div>
 <div class="pre"><input data-act="pr" data-i="${i}" value="${esc(prOf(i))}" aria-label="${i+1}번 멘트 한글 발음"></div>
-</li>`}).join('');
+</li>`}).join('')+notesAt(S.items.length);
   const inp=list.querySelector('input[data-act="spin"]');if(inp)inp.focus();
 }
 function mark(){
-  for(const li of list.children){const i=+li.dataset.i,on=i===S.cur;li.classList.toggle('on',on);
+  for(const li of list.querySelectorAll('.ln')){const i=+li.dataset.i,on=i===S.cur;li.classList.toggle('on',on);
     const b=li.querySelector('.pl svg');if(b)b.innerHTML=on&&S.playing?PAUSE:PLAY;
     const g=S.segs[i],tm=li.querySelector('.tm');if(tm)tm.textContent=`${fmt(g.s)} – ${fmt(g.e)} · ${(g.e-g.s).toFixed(1)}초`}
   const it=S.items[S.cur];
@@ -1021,7 +1014,8 @@ function segEnd(){
 const ready=()=>S.items.length&&(S.tts||S.pk);
 function playLine(i){if(i<0)return;stop();S.cur=i;const rep=+$('#rep').value;S.left=rep||1;playCur()}
 function playRange(i,s,e){stop();S.cur=i;S.temp=true;startSeg(s,e)}
-function reveal(i){const li=list.children[i];if(li){const r=li.getBoundingClientRect();if(r.top<0||r.bottom>innerHeight-90)li.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}}
+const lineEl=i=>list.querySelector(`.ln[data-i="${i}"]`);
+function reveal(i){const li=lineEl(i);if(li){const r=li.getBoundingClientRect();if(r.top<0||r.bottom>innerHeight-90)li.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}}
 
 /* ---------- waveform ---------- */
 function draw(){
@@ -1047,7 +1041,7 @@ cv.addEventListener('click',ev=>{if(!S.pk||!S.segs.length)return;const r=cv.getB
 
 /* ---------- events ---------- */
 function addSpeaker(i){const inp=list.querySelector('input[data-act="spin"]');const v=(inp&&inp.value||'').trim().slice(0,24);S.newSpk=-1;if(v){if(!S.spk[i].includes(v))S.spk[i]=[...S.spk[i],v];saveSpk()}render();mark();draw()}
-list.addEventListener('change',e=>{const t=e.target;if(t.dataset.act!=='pr')return;const i=+t.dataset.i,v=t.value.trim();S.pr[i]=v===autoPr(i)?'':v;const d=list.children[i]&&list.children[i].querySelector('.pr');if(d)d.textContent=prOf(i);if(!v)t.value=autoPr(i);savePr()});
+list.addEventListener('change',e=>{const t=e.target;if(t.dataset.act!=='pr')return;const i=+t.dataset.i,v=t.value.trim();S.pr[i]=v===autoPr(i)?'':v;const d=lineEl(i)&&lineEl(i).querySelector('.pr');if(d)d.textContent=prOf(i);if(!v)t.value=autoPr(i);savePr()});
 list.addEventListener('keydown',e=>{if(e.target.dataset.act==='pr'&&e.key==='Enter'){e.preventDefault();e.target.blur()}});
 list.addEventListener('keydown',e=>{if(e.target.dataset.act==='spin'){if(e.key==='Enter'){e.preventDefault();addSpeaker(+e.target.closest('.ln').dataset.i)}else if(e.key==='Escape'){S.newSpk=-1;render();mark()}}});
 list.addEventListener('click',ev=>{
@@ -1185,7 +1179,7 @@ $('#bkIn').onchange=async e=>{
 function Picker(root){
   const nm='v'+Math.random().toString(36).slice(2,8);
   root.innerHTML=`<div class="vis" role="radiogroup" aria-label="공유 범위">
-<label><input type="radio" name="${nm}" value="public"><span>전체 공개<small>로그인한 모든 사람이 볼 수 있어요</small></span></label>
+<label><input type="radio" name="${nm}" value="public"><span>전체 공개<small>누구나 볼 수 있어요</small></span></label>
 <label><input type="radio" name="${nm}" value="partial"><span>일부 공개<small>지정한 사람에게 알림이 가고, 수락하면 그 사람 목록에 들어가요</small></span></label>
 <label><input type="radio" name="${nm}" value="private"><span>비공개<small>나만 볼 수 있어요</small></span></label></div>
 <div class="mention hidden"><div class="mchips"></div>
@@ -1275,14 +1269,14 @@ $('#note').addEventListener('click',()=>note(''));
 let spEdit=null;
 function spMsg(t){$('#spMsg').textContent=t||''}
 function openSpaces(){if(!B.remote)return;
-  stop();for(const id of ['#lib','#practice','#setup','#fldForm','#bk','#trash','#me','#bar'])show(id,false);show('#spaces',true);spEdit=null;spMsg('');$('#spCode').value='';renderSpaces();scrollTo(0,0)}
+  stop();for(const id of ['#lib','#practice','#setup','#fldForm','#bk','#trash','#me','#bar'])show(id,false);show('#spaces',true);spEdit=null;spMsg('');renderSpaces();scrollTo(0,0)}
 function renderSpaces(){
   const my=viewSpaces();
-  $('#spList').innerHTML=my.length?my.map(x=>`<li><button class="sp" data-sp="${esc(x.id)}" aria-current="${x.id===B.space}"><span>${esc(x.name)}<br><small>${x.member?`멤버 ${+x.members||0}명`:'로그인 없이 보는 중 · 전체 공개만 보여요'}${x.id===B.space?' · 지금 보는 공간':''}</small></span>${x.id===B.space?'<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>':''}</button></li>`).join('')
-    :'<li class="empty-l">아직 들어간 공간이 없어요. 아래에 참여 코드를 넣어 주세요.</li>';
+  $('#spList').innerHTML=my.length?my.map(x=>`<li><button class="sp" data-sp="${esc(x.id)}" aria-current="${x.id===B.space}"><span>${esc(x.name)}<br><small>${x.member?`멤버 ${+x.members||0}명`:B.session?'들어가면 멤버가 돼요':'전체 공개 스크립트만 보여요'}${x.id===B.space?' · 지금 보는 공간':''}</small></span>${x.id===B.space?'<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>':''}</button></li>`).join('')
+    :'<li class="empty-l">아직 공간이 없어요.</li>';
   show('#spAdmin',B.admin);if(!B.admin)return;
-  const row=x=>spEdit===(x?x.id:'new')?`<div class="spadm" data-id="${x?esc(x.id):''}"><input class="inp" data-f="name" maxlength="40" placeholder="공간 이름 (예: 인도네시아어 1반)" value="${x?esc(x.name):''}" aria-label="공간 이름"><input class="inp" data-f="code" maxlength="40" placeholder="참여 코드 (6자 이상)" value="${x?esc(x.join_code||''):''}" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="참여 코드"><div class="file"><button class="btn main" data-a="save">저장</button><button class="btn" data-a="cancel">취소</button></div></div>`
-    :`<div class="spadm" data-id="${esc(x.id)}"><div class="file" style="justify-content:space-between"><span><b>${esc(x.name)}</b><br><small style="color:var(--mute)">참여 코드 <code>${esc(x.join_code||'')}</code> · 멤버 ${+x.members||0}명${x.member?'':' · 나는 아직 멤버가 아니에요'}</small></span><button class="btn" data-a="edit">고치기</button></div></div>`;
+  const row=x=>spEdit===(x?x.id:'new')?`<div class="spadm" data-id="${x?esc(x.id):''}"><input class="inp" data-f="name" maxlength="40" placeholder="공간 이름 (예: 인도네시아어 1반)" value="${x?esc(x.name):''}" aria-label="공간 이름"><div class="file"><button class="btn main" data-a="save">저장</button><button class="btn" data-a="cancel">취소</button></div></div>`
+    :`<div class="spadm" data-id="${esc(x.id)}"><div class="file" style="justify-content:space-between"><span><b>${esc(x.name)}</b><br><small style="color:var(--mute)">멤버 ${+x.members||0}명${x.member?'':' · 나는 아직 멤버가 아니에요'}</small></span><button class="btn" data-a="edit">이름 바꾸기</button></div></div>`;
   $('#spAdmList').innerHTML=B.spaces.map(row).join('')+(spEdit==='new'?row(null):'')||'<p class="hint">아직 공간이 없어요. ‘+ 새 공간’으로 만들어 주세요.</p>';
   show('#spNew',spEdit!=='new');
 }
@@ -1291,20 +1285,17 @@ $('#guestNote').onclick=()=>showAuth();
 $('#guestNote').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showAuth()}};
 $('#spClose').onclick=goLib;
 $('#spList').addEventListener('click',e=>{const b=e.target.closest('button[data-sp]');if(!b)return;switchSpace(b.dataset.sp);goLib();scrollTo(0,0)});
-$('#spJoin').onclick=async()=>{$('#spJoin').disabled=true;try{if(await enterCode($('#spCode').value,spMsg))$('#spCode').value=''}finally{$('#spJoin').disabled=false}};
-$('#spCode').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#spJoin').click()}});
 $('#spNew').onclick=()=>{spEdit='new';spMsg('');renderSpaces();const i=$('#spAdmList input[data-f="name"]');if(i)i.focus()};
 $('#spAdmList').addEventListener('click',async e=>{const b=e.target.closest('button[data-a]');if(!b)return;const box=b.closest('.spadm'),id=box.dataset.id||null,a=b.dataset.a;
   if(a==='edit'){spEdit=id;spMsg('');renderSpaces();return}
   if(a==='cancel'){spEdit=null;spMsg('');renderSpaces();return}
-  const name=box.querySelector('[data-f="name"]').value.trim(),code=box.querySelector('[data-f="code"]').value.trim(),cur=B.spaces.find(x=>x.id===id);
+  const name=box.querySelector('[data-f="name"]').value.trim();
   if(!name){spMsg('공간 이름을 적어 주세요.');return}
-  if(code.length<6&&!(cur&&(cur.join_code||'').toLowerCase()===code.toLowerCase())){spMsg('참여 코드는 6자 이상으로 정해 주세요. 짧으면 다른 사람이 맞히기 쉬워요.');return}
   b.disabled=true;
-  try{const {data,error}=await sb.rpc('save_space',{p_token:B.session,p_admin:adminArg(),p_id:id,p_name:name,p_code:code});
+  try{const {data,error}=await sb.rpc('save_space',{p_token:B.session,p_admin:adminArg(),p_id:id,p_name:name});
     if(error||!data){spMsg('저장하지 못했어요. 다시 시도해 주세요.');return}
-    if(data.error){spMsg(data.error==='code_taken'?'다른 공간이 이미 쓰는 참여 코드예요. 다른 코드로 정해 주세요.':data.error==='forbidden'?'관리자 모드를 다시 켜 주세요.':'이름과 참여 코드를 확인해 주세요.');return}
-    spEdit=null;await reloadLib();if(!id)switchSpace(data.id);renderSpaces();spMsg(id?'저장했어요.':`‘${name}’ 공간을 만들었어요. 참여 코드를 함께할 사람들에게 알려 주세요.`)}
+    if(data.error){spMsg(data.error==='forbidden'?'관리자 모드를 다시 켜 주세요.':'공간 이름을 확인해 주세요.');return}
+    spEdit=null;await reloadLib();if(!id)switchSpace(data.id);renderSpaces();spMsg(id?'저장했어요.':`‘${name}’ 공간을 만들었어요.`)}
   finally{b.disabled=false}});
 
 /* ---------- account ---------- */
@@ -1339,8 +1330,7 @@ $('#authForm').addEventListener('submit',async e=>{
   finally{$('#auGo').disabled=false}
 });
 async function loggedIn(d){
-  B.session=pref.get('session','');B.me=d.id;B.login=d.login;B.name=d.name;B.canAdd=true;
-  for(const c of getCodes()){try{const {data}=await sb.rpc('join_space',{p_token:B.session,p_code:c});if(data&&data.error==='bad_code')dropCode(c)}catch(e){}}
+  B.session=pref.get('session','');B.me=d.id;B.login=d.login;B.name=d.name;B.canAdd=true;joinTried='';
   accountUI();show('#auth',false);const next=afterLogin;afterLogin='';goLib();if(next==='add')openForm();
   const old=pref.get('token','');
   if(old){try{const {data}=await sb.rpc('claim_sets',{p_token:B.session,p_key:old});if(data>0)note(`이 기기에서 예전에 올린 세트 ${data}개를 내 계정으로 옮겼어요.`)}catch(e){}pref.set('token','')}
