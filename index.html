@@ -55,7 +55,9 @@ textarea{width:100%;min-height:170px;border:1px solid var(--line);border-radius:
 select{min-height:44px;border-radius:999px;border:1px solid var(--line);background:var(--chip);padding:0 12px;font-size:16px}
 #msg{font-size:14.5px;margin-top:12px;color:var(--redink);min-height:1em}
 .opts{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 12px;align-items:center}
-.opts.tgs{margin-top:-4px}
+.opts.tgs{position:sticky;top:0;z-index:5;background:var(--bg);margin:-4px calc(-1*max(4vw,14px)) 12px;padding:8px max(4vw,14px);transition:box-shadow .15s}
+.opts.tgs.stuck{box-shadow:0 1px 0 var(--line),0 6px 12px -8px rgba(0,0,0,.25)}
+@media(max-width:600px){.opts.tgs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain}.opts.tgs::-webkit-scrollbar{display:none}.opts.tgs .tg{flex:none;white-space:nowrap}}
 .opts label{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--mute)}
 .opts select{min-height:40px;font-size:15px;padding:0 10px}
 .tg{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:14px;font-weight:600}
@@ -1030,6 +1032,9 @@ function mark(){
   setPP();
 }
 
+// the toggle row stays pinned at the top while scrolling a script; show a line under it once it is pinned
+addEventListener('scroll',()=>{const t=$('.opts.tgs');if(t)t.classList.toggle('stuck',!$('#practice').classList.contains('hidden')&&t.getBoundingClientRect().top<=0.5&&scrollY>0)},{passive:true});
+
 /* ---------- playback ---------- */
 function loadVoices(){
   if(!SY)return;const pre=langTts(S.lang).split('-')[0].toLowerCase();
@@ -1108,7 +1113,8 @@ const ready=()=>S.items.length&&(S.tts||S.pk);
 function playLine(i){if(i<0)return;stop();S.cur=i;const rep=+$('#rep').value;S.left=rep||1;playCur()}
 function playRange(i,s,e){stop();S.cur=i;S.temp=true;startSeg(s,e)}
 const lineEl=i=>list.querySelector(`.ln[data-i="${i}"]`);
-function reveal(i){const li=lineEl(i);if(li){const r=li.getBoundingClientRect();if(r.top<0||r.bottom>innerHeight-90)li.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}}
+const tgsBottom=()=>{const t=$('.opts.tgs');return t&&!$('#practice').classList.contains('hidden')?Math.max(0,t.getBoundingClientRect().bottom):0};
+function reveal(i){const li=lineEl(i);if(li){const r=li.getBoundingClientRect();if(r.top<tgsBottom()||r.bottom>innerHeight-90)li.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}}
 
 /* ---------- waveform ---------- */
 function draw(){
