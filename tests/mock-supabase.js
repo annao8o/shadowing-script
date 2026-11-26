@@ -41,9 +41,9 @@ const rpcs={
  respond_share({p_token,p_set_id,p_accept}){const v=acct(p_token);const h=ST.sh.find(x=>x.set===p_set_id&&x.acc===v);if(!h)return{error:'no_share'};h.status=p_accept?'accepted':'declined';save();return{ok:true}}
 };
 window.supabase={createClient:()=>({
- async rpc(n,a){try{const fresh=JSON.parse(localStorage.getItem(K)||'null');if(fresh)Object.assign(ST,fresh);return{data:await rpcs[n](a||{}),error:null}}catch(e){return{data:null,error:e}}},
+ async rpc(n,a){if(localStorage.getItem('sbmock.down'))return{data:null,error:{message:'TypeError: Failed to fetch'}};try{const fresh=JSON.parse(localStorage.getItem(K)||'null');if(fresh)Object.assign(ST,fresh);return{data:await rpcs[n](a||{}),error:null}}catch(e){return{data:null,error:e}}},
  storage:{from:()=>({async upload(path,blob,o){const r=new FileReader();const d=await new Promise(res=>{r.onload=()=>res(r.result);r.readAsDataURL(blob)});ST.files[path]={d,type:o.contentType};save();return{data:{path},error:null}},
    getPublicUrl:p=>({data:{publicUrl:'https://mock.storage/'+p}}),async remove(){return{data:null,error:{message:'denied'}}}})}
 })};
-const of=window.fetch;window.fetch=async(u,...a)=>{const m=String(u).match(/^https:\/\/mock\.storage\/(.+)$/);if(m){const f=ST.files[m[1]];if(!f)return new Response('',{status:404});return of(f.d)}return of(u,...a)};
+const of=window.fetch;window.fetch=async(u,...a)=>{const m=String(u).match(/^https:\/\/mock\.storage\/(.+)$/);if(m){if(localStorage.getItem('sbmock.down'))throw new TypeError('Failed to fetch');const f=ST.files[m[1]];if(!f)return new Response('',{status:404});return of(f.d)}return of(u,...a)};
 })();

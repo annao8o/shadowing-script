@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#c8102e"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="쉐도잉">
 <title>쉐도잉 스크립트</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
@@ -91,6 +93,10 @@ body.edit .ed{display:flex}
 @media(max-width:600px){.tx{font-size:17px}.ln{grid-template-columns:30px minmax(0,1fr) 46px;gap:10px;padding:11px}.no{width:30px;height:30px;font-size:13px}.pl{width:46px;height:46px}}
 .inp{width:100%;min-height:44px;border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:0 12px;font-size:16px}
 .gnote{position:static;box-shadow:none}
+.onote{position:static;box-shadow:none;cursor:default;background:var(--chip)}
+.offb{color:var(--s1);font-weight:700}
+.offrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px;color:var(--mute)}
+body.offline #inboxBtn,body.offline #bkBtn,body.offline #meBtn,body.offline #meIcon,body.offline #trBtn,body.offline #guestNote,body.offline #guestHint,body.offline #leaveBox,body.offline #fLeaveRow,body.offline .gear{display:none!important}
 .note{margin:16px 0 0;padding:10px 14px;border-radius:12px;background:var(--rose);font-size:14px;position:sticky;top:8px;z-index:6;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08)}
 .sets{list-style:none;margin:12px 0 24px;padding:0;display:grid;gap:8px}
 .set{display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;border:1px solid var(--line);background:var(--card);cursor:pointer;width:100%;text-align:start}
@@ -184,6 +190,7 @@ body.pred .pre{display:block}
 </header>
 <main class="wrap">
   <p class="note hidden" id="note"></p>
+  <p class="note onote hidden" id="offNote" role="status">인터넷에 연결되지 않았어요. 이 기기에 오프라인 저장한 스크립트만 보여요.</p>
   <section class="setup hidden" id="auth">
     <button class="back" id="authBack" type="button" style="margin-top:0">← 로그인 없이 둘러보기</button>
     <p class="hint" id="authWhy" style="margin:4px 0 12px"></p>
@@ -209,6 +216,7 @@ body.pred .pre{display:block}
     <div class="fhead hidden" id="fHead">
       <div class="sum"><h2 id="fTitleH"></h2><span id="fInfo"></span></div>
       <div class="row hidden" id="fLeaveRow" style="margin-top:10px"><button class="btn" id="fLeave">내 목록에서 빼기</button></div>
+      <div class="offrow hidden" id="fOffRow" style="margin-top:10px"><button class="btn" id="fOffBtn">폴더째 오프라인 저장</button><span id="fOffState"></span></div>
     </div>
     <div class="libtools"><div class="spkbar hidden" id="langBar" role="group" aria-label="언어별 보기"></div>
       <select id="sortSel" class="inp hidden" aria-label="정렬"><option value="recent">최근 수정순</option><option value="new">최근 추가순</option><option value="old">오래된 순</option><option value="title">제목순</option></select></div>
@@ -327,6 +335,7 @@ body.pred .pre{display:block}
     <p class="hint hidden" id="spkHint">멘트마다 아래 화자 버튼을 눌러 지정하세요. 여러 명을 함께 고를 수 있고, 다시 누르면 빠져요. ‘+ 새 화자’로 이름을 추가할 수 있어요.</p>
     <div class="spkbar hidden" id="spkBar" role="group" aria-label="화자별 보기"></div>
     <ol class="lines" id="list"></ol>
+    <div class="del hidden" id="offBox"><button class="btn" id="offBtn">오프라인 저장</button><span id="offState"></span></div>
     <div class="del hidden" id="leaveBox"><button class="btn" id="leaveBtn">내 목록에서 빼기</button><span>공유받은 세트예요</span></div>
     <div class="del hidden" id="delBox"><button class="btn" id="delBtn">휴지통으로 이동</button></div>
   </section>
@@ -545,7 +554,7 @@ const fOf=id=>id&&B.folders.find(f=>f.id===id)||null;
 const myFolder=f=>!!f&&B.remote&&!!B.me&&f.owner_id===B.me;
 const inFolder=s=>s.folder&&fOf(s.folder)?s.folder:null;
 const visTxt=(v,n)=>v==='private'?'비공개':v==='partial'?`일부 공개 ${n||0}명`:'전체 공개';
-const canModify=set=>!!set&&(B.admin||(!!B.me&&set.uid===B.me));
+const canModify=set=>!B.offline&&!!set&&(B.admin||(!!B.me&&set.uid===B.me));
 const whoOf=s=>!B.remote?'':s.uid&&s.uid===B.me?'<span class="mine">내 세트</span>'+(inFolder(s)?'':s.visibility==='private'?' · 비공개':s.visibility==='partial'?` · 일부 공개 ${s.shareCount||0}명`:'')+' · ':(s.sharedWithMe?'공유받음 · ':'')+(s.author?esc(s.author)+' · ':'');
 
 /* ---------- local fallback storage (this browser only) ---------- */
@@ -581,10 +590,11 @@ async function load(){
     const tok=B.session||null;
     const [{data,error},fr,sr]=await Promise.all([sb.rpc('list_sets',{p_token:tok}),sb.rpc('list_folders',{p_token:tok}),sb.rpc('list_spaces',{p_token:tok})]);
     if(error){if(isAuthErr(error)){loading=false;logout(true);return}throw error}
+    if(B.offline)leaveOffline();
     B.rawSets=data||[];B.rawFolders=fr&&!fr.error&&Array.isArray(fr.data)?fr.data:[];B.spaces=sr&&!sr.error&&Array.isArray(sr.data)?sr.data:[];
     applySpace();if($('#note').textContent.startsWith('목록을'))note('');libCb&&libCb();
-    loadInbox();
-  }catch(e){note('목록을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.')}
+    loadInbox();offSync();
+  }catch(e){if(offHas()){if(!B.offline){enterOffline();libCb&&libCb()}}else note('목록을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.')}
   loading=false;
   if(B.session&&B.space&&!isMember(B.space))joinSpace(B.space);
 }
@@ -669,25 +679,106 @@ const saveSpk=()=>{clearTimeout(spkT);spkT=setTimeout(()=>S.set&&patchSet(S.set,
 function b64(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]||'');r.onerror=()=>rej(r.error);r.readAsDataURL(blob)})}
 async function getAudio(set){
   if(!B.remote)return set.blob||null;
+  const o=OFF.sets[set.id];
+  if(o&&o.size&&set.audio&&o.row.audio_path===set.audio.path){const b=await oget('aud:'+set.id);if(b)return b}
   if(!set.audio||!set.audio.path)return null;
+  if(!sb)throw new Error('offline');
   const url=sb.storage.from('audio').getPublicUrl(set.audio.path).data.publicUrl;
   const r=await fetch(url);if(!r.ok)throw new Error('missing');
   const b=await r.blob();return new Blob([b],{type:set.audio.mime||b.type||'audio/mpeg'});
 }
 function saveFile(name,blob){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000)}
 
+/* ---------- offline saves ---------- */
+// Only what the person picks is kept on this device (never just because it was played):
+// OFF.sets[id]={row,own,via,size} (own = saved by itself, via = saved with that folder), OFF.folders[id]=folder row,
+// recordings as 'aud:<id>' in IndexedDB 'naskah-off'. Rows are refreshed from the server on every online load.
+const OFF={sets:{},folders:{},spaces:[]};
+function odb(){return new Promise((res,rej)=>{try{const r=indexedDB.open('naskah-off',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('kv'))r.result.createObjectStore('kv')};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})}
+async function oget(k){try{const db=await odb();return await new Promise(res=>{const r=db.transaction('kv').objectStore('kv').get(k);r.onsuccess=()=>res(r.result);r.onerror=()=>res(undefined)})}catch(e){return undefined}}
+async function oput(k,v){const db=await odb();await new Promise((res,rej)=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})}
+async function odel(k){try{const db=await odb();await new Promise(res=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').delete(k);t.oncomplete=res;t.onerror=res})}catch(e){}}
+async function offLoad(){const x=await oget('idx');if(x&&x.sets)Object.assign(OFF,{sets:x.sets||{},folders:x.folders||{},spaces:x.spaces||[]})}
+function offSave(){if(!B.offline&&B.spaces.length)OFF.spaces=B.spaces.map(x=>({id:x.id,name:x.name,member:!!x.member,members:+x.members||0}));return oput('idx',{sets:OFF.sets,folders:OFF.folders,spaces:OFF.spaces})}
+const offHas=()=>Object.keys(OFF.sets).length>0||Object.keys(OFF.folders).length>0;
+const mb=n=>n>=1048576?(n/1048576).toFixed(1)+'MB':Math.max(1,Math.round(n/1024))+'KB';
+const offErr=e=>e&&e.name==='QuotaExceededError'?'기기 저장 공간이 부족해요. 다른 오프라인 저장을 해제하고 다시 해 주세요.':e&&e.code==='audio'?'녹음 파일을 받지 못했어요. 인터넷 연결을 확인해 주세요.':'오프라인 저장을 하지 못했어요. 잠시 뒤 다시 해 주세요.';
+async function askPersist(){try{if(navigator.storage&&navigator.storage.persist)await navigator.storage.persist()}catch(e){}}
+// keep one set (and its recording) from its server row
+async function offStore(row,{own,via}={}){
+  const cur=OFF.sets[row.id];let size=cur?cur.size:0;
+  if(row.audio_path&&!(cur&&cur.row.audio_path===row.audio_path&&cur.size)){
+    const r=await fetch(sb.storage.from('audio').getPublicUrl(row.audio_path).data.publicUrl).catch(()=>null);if(!r||!r.ok)throw{code:'audio'};
+    const b=await r.blob();await oput('aud:'+row.id,new Blob([b],{type:row.audio_mime||b.type||'audio/mpeg'}));size=b.size;
+  }
+  if(!row.audio_path){await odel('aud:'+row.id);size=0}
+  OFF.sets[row.id]={row,own:!!(own||(cur&&cur.own)),via:via!==undefined?via:(cur?cur.via:null),size};
+}
+async function offForget(id){delete OFF.sets[id];await odel('aud:'+id)}
+async function saveSetOffline(id){const row=B.rawSets.find(r=>r.id===id);if(!row)throw{};try{await offStore(row,{own:true})}finally{await offSave()}askPersist()}
+async function dropSetOffline(id){const x=OFF.sets[id];if(!x)return;if(x.via&&OFF.folders[x.via])x.own=false;else await offForget(id);await offSave()}
+async function saveFolderOffline(fid,say){
+  const f=B.rawFolders.find(x=>x.id===fid);if(!f)throw{};OFF.folders[fid]=f;
+  const rows=B.rawSets.filter(r=>r.folder_id===fid&&!r.deleted_at);let i=0;
+  try{for(const r of rows){say(`저장하는 중… ${++i}/${rows.length}`);await offStore(r,{via:fid})}}finally{await offSave()}askPersist()
+}
+async function dropFolderOffline(fid){delete OFF.folders[fid];for(const [id,x] of Object.entries(OFF.sets))if(x.via===fid){if(x.own)x.via=null;else await offForget(id)}await offSave()}
+const folderBytes=fid=>Object.values(OFF.sets).filter(x=>x.via===fid).reduce((a,x)=>a+(x.size||0),0);
+// after each online load: bring saved copies up to date, add scripts newly put into a saved folder
+let offSyncing=false;
+async function offSync(){
+  if(offSyncing||B.offline||!offHas())return;offSyncing=true;
+  try{let ch=false;
+    for(const fid of Object.keys(OFF.folders)){const fr=B.rawFolders.find(x=>x.id===fid);if(!fr)continue;OFF.folders[fid]=fr;ch=true;
+      for(const r of B.rawSets)if(r.folder_id===fid&&!r.deleted_at&&!(OFF.sets[r.id]&&OFF.sets[r.id].via===fid))await offStore(r,{via:fid});}
+    for(const [id,x] of Object.entries(OFF.sets)){const r=B.rawSets.find(y=>y.id===id);if(!r)continue;
+      if(r.deleted_at||(x.via&&r.folder_id!==x.via&&!x.own)){await offForget(id);ch=true;continue}
+      if(x.via&&r.folder_id!==x.via)x.via=null;
+      if(r.updated_at!==x.row.updated_at||r.audio_path!==x.row.audio_path||r.visibility!==x.row.visibility){await offStore(r);ch=true}}
+    if(ch)await offSave();
+  }catch(e){}finally{offSyncing=false}
+}
+// no connection: show only what was saved on this device, read-only
+function enterOffline(){
+  B.offline=true;document.body.classList.add('offline');show('#offNote',true);
+  B.rawSets=Object.values(OFF.sets).map(x=>x.row);B.rawFolders=Object.values(OFF.folders);
+  const known=new Map([...OFF.spaces,...B.spaces].map(x=>[x.id,x]));
+  const ids=[...new Set([...B.rawSets.map(r=>r.space_id),...B.rawFolders.map(f=>f.space_id)])].filter(Boolean);
+  B.spaces=ids.map(id=>{const k=known.get(id)||{};return{id,name:k.name||'공간',member:!!k.member,members:+k.members||0}});
+  applySpace();
+}
+function leaveOffline(){B.offline=false;document.body.classList.remove('offline');show('#offNote',false)}
+function offUI(){
+  const s=S.set;if(!s||!B.remote){show('#offBox',false);return}
+  const o=OFF.sets[s.id];show('#offBox',!!o||!B.offline);
+  $('#offBtn').textContent=o&&o.own?'오프라인 저장 해제':'오프라인 저장';show('#offBtn',o?o.own:!B.offline);
+  $('#offState').textContent=o?(o.own?'이 기기에 저장됨':'폴더째 이 기기에 저장됨')+(o.size?' · '+mb(o.size):''):'인터넷 없이도 보려면 저장해 두세요';
+}
+$('#offBtn').onclick=async()=>{const s=S.set;if(!s)return;const b=$('#offBtn');b.disabled=true;
+  try{const o=OFF.sets[s.id];
+    if(o&&o.own){await dropSetOffline(s.id);note('오프라인 저장을 해제했어요.');if(B.offline){enterOffline();if(!OFF.sets[s.id]){goLib();return}}}
+    else{$('#offState').textContent='저장하는 중…';await saveSetOffline(s.id);note('이 기기에 저장했어요. 인터넷이 없어도 볼 수 있어요.')}}
+  catch(e){note(offErr(e))}
+  finally{b.disabled=false;offUI();if(!$('#lib').classList.contains('hidden'))renderLib()}};
+$('#fOffBtn').onclick=async()=>{const fid=B.folder;if(!fid)return;const b=$('#fOffBtn');b.disabled=true;
+  try{if(OFF.folders[fid]){await dropFolderOffline(fid);note('폴더의 오프라인 저장을 해제했어요.');if(B.offline){enterOffline();if(!fOf(fid))B.folder=null}}
+    else{await saveFolderOffline(fid,t=>{$('#fOffState').textContent=t});note('폴더를 이 기기에 저장했어요. 나중에 이 폴더에 넣는 스크립트도 인터넷에 연결될 때 함께 저장돼요.')}}
+  catch(e){note(offErr(e))}
+  finally{b.disabled=false;renderLib()}};
+window.addEventListener('online',()=>{if(!B.remote)return;if(!sb){location.reload();return}if(B.offline)load()});
+
 /* ---------- library view ---------- */
 function folderInfo(f){const own=myFolder(f),n=B.lib.filter(x=>x.folder===f.id).length;
   return (own?'내 폴더 · '+visTxt(f.visibility,f.share_count):[f.shared_with_me?'공유받음':'',f.owner_name||''].filter(Boolean).join(' · '))+' · 스크립트 '+n+'개'}
 function folderRow(f){const own=myFolder(f),n=B.lib.filter(x=>x.folder===f.id).length;
   const info=own?'<span class="mine">내 폴더</span> · '+esc(visTxt(f.visibility,f.share_count)):[f.shared_with_me?'공유받음':'',esc(f.owner_name||'')].filter(Boolean).join(' · ');
-  return `<li${own?' class="cfg"':''}><button class="set" data-fid="${esc(f.id)}"><span class="fic"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${FOLDER}</svg></span><span class="tt"><b>${esc(f.title)}</b><small>${info}${info?' · ':''}스크립트 ${n}개</small></span><span class="go gr"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">${CHEV}</svg></span></button>${own?`<button class="gear" data-fcfg="${esc(f.id)}" aria-label="‘${esc(f.title)}’ 폴더 설정" title="폴더 설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GEAR}</svg></button>`:''}</li>`}
+  return `<li${own?' class="cfg"':''}><button class="set" data-fid="${esc(f.id)}"><span class="fic"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${FOLDER}</svg></span><span class="tt"><b>${esc(f.title)}</b><small>${info}${info?' · ':''}스크립트 ${n}개${OFF.folders[f.id]?' · <span class="offb">오프라인</span>':''}</small></span><span class="go gr"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">${CHEV}</svg></span></button>${own?`<button class="gear" data-fcfg="${esc(f.id)}" aria-label="‘${esc(f.title)}’ 폴더 설정" title="폴더 설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GEAR}</svg></button>`:''}</li>`}
 function setRow(s){const its=parseScript(s.script,s.mode||'auto');const sp=new Set((s.spk&&s.spk.length===its.length?s.spk:its.map(i=>i.sp)).flatMap(spkList));
   const who=whoOf(s),cfg=canModify(s);
-  return `<li${cfg?' class="cfg"':''}><button class="set" data-id="${esc(s.id)}"><span class="tt"><b>${esc(s.title||'제목 없음')}</b><small><span class="lt">${esc(langName(s.lang))}</span>${who.replace(/ · $/,'')}</small><small class="m2">${its.length}개 멘트${sp.size?' · 화자 '+sp.size+'명':''} · ${s.tts?'기계 음성':'녹음 '+fmt(s.dur)}</small></span><span class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">${PLAY}</svg></span></button>${cfg?`<button class="gear" data-cfg="${esc(s.id)}" aria-label="‘${esc(s.title||'제목 없음')}’ 세트 설정" title="세트 설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GEAR}</svg></button>`:''}</li>`}
+  return `<li${cfg?' class="cfg"':''}><button class="set" data-id="${esc(s.id)}"><span class="tt"><b>${esc(s.title||'제목 없음')}</b><small><span class="lt">${esc(langName(s.lang))}</span>${who.replace(/ · $/,'')}</small><small class="m2">${its.length}개 멘트${sp.size?' · 화자 '+sp.size+'명':''} · ${s.tts?'기계 음성':'녹음 '+fmt(s.dur)}${OFF.sets[s.id]?' · <span class="offb">오프라인</span>':''}</small></span><span class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">${PLAY}</svg></span></button>${cfg?`<button class="gear" data-cfg="${esc(s.id)}" aria-label="‘${esc(s.title||'제목 없음')}’ 세트 설정" title="세트 설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GEAR}</svg></button>`:''}</li>`}
 function renderLib(){
   const noSpace=B.remote&&!B.space;
-  const canAddHere=B.remote?!!B.session&&isMember(B.space):B.canAdd;
+  const canAddHere=B.remote?!B.offline&&!!B.session&&isMember(B.space):B.canAdd;
   show('#addBtn',canAddHere);
   show('#guestHint',B.remote&&!!B.space&&!B.session);
   show('#guestNote',B.remote&&!B.session&&!!B.space);
@@ -698,7 +789,9 @@ function renderLib(){
   const F=fOf(B.folder);
   if(!$('#lib').classList.contains('hidden'))setRoute(F?'folder='+F.id:'');
   show('#newFld',canAddHere&&B.remote&&!F);show('#fHead',!!F);show('#fBack',!!F);
-  if(F){$('#fTitleH').textContent=F.title;$('#fInfo').textContent=folderInfo(F);show('#fLeaveRow',!!F.shared_with_me&&!myFolder(F))}
+  if(F){$('#fTitleH').textContent=F.title;$('#fInfo').textContent=folderInfo(F);show('#fLeaveRow',!!F.shared_with_me&&!myFolder(F));
+    const fo=!!OFF.folders[F.id];show('#fOffRow',B.remote&&(fo||!B.offline));$('#fOffBtn').textContent=fo?'오프라인 저장 해제':'폴더째 오프라인 저장';
+    if(!$('#fOffBtn').disabled)$('#fOffState').textContent=fo?'이 기기에 저장됨'+(folderBytes(F.id)?' · '+mb(folderBytes(F.id)):''):''}
   const el=$('#sets');
   if(noSpace){show('#langBar',false);show('#sortSel',false);
     el.innerHTML=`<li class="empty-l">아직 공간이 없어요. ${B.admin?'위쪽 공간 버튼에서 ‘+ 새 공간’으로 만들어 주세요.':'관리자가 공간을 만들면 여기에 나와요.'}</li>`;return}
@@ -746,7 +839,7 @@ async function openSet(set){
   setRoute('set='+set.id);
   show('#lib',false);show('#setup',false);show('#practice',true);show('#bar',true);show('#delBox',canModify(set));show('#delBtn',true);
   const own=B.remote&&set.uid===B.me;show('#leaveBox',B.remote&&set.sharedWithMe&&!own);
-  setupView();scrollTo(0,0);
+  setupView();offUI();scrollTo(0,0);
   if(S.tts){setAudio(null);return}
   $('#wEmpty').textContent='음성을 불러오는 중…';show('#wEmpty',true);cv.classList.add('hidden');
   try{
@@ -1272,7 +1365,7 @@ function openSpaces(){if(!B.remote)return;
   stop();for(const id of ['#lib','#practice','#setup','#fldForm','#bk','#trash','#me','#bar'])show(id,false);show('#spaces',true);spEdit=null;spMsg('');renderSpaces();scrollTo(0,0)}
 function renderSpaces(){
   const my=viewSpaces();
-  $('#spList').innerHTML=my.length?my.map(x=>`<li><button class="sp" data-sp="${esc(x.id)}" aria-current="${x.id===B.space}"><span>${esc(x.name)}<br><small>${x.member?`멤버 ${+x.members||0}명`:B.session?'들어가면 멤버가 돼요':'전체 공개 스크립트만 보여요'}${x.id===B.space?' · 지금 보는 공간':''}</small></span>${x.id===B.space?'<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>':''}</button></li>`).join('')
+  $('#spList').innerHTML=my.length?my.map(x=>`<li><button class="sp" data-sp="${esc(x.id)}" aria-current="${x.id===B.space}"><span>${esc(x.name)}<br><small>${B.offline?'오프라인 저장한 스크립트':x.member?`멤버 ${+x.members||0}명`:B.session?'들어가면 멤버가 돼요':'전체 공개 스크립트만 보여요'}${x.id===B.space?' · 지금 보는 공간':''}</small></span>${x.id===B.space?'<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>':''}</button></li>`).join('')
     :'<li class="empty-l">아직 공간이 없어요.</li>';
   show('#spAdmin',B.admin);if(!B.admin)return;
   const row=x=>spEdit===(x?x.id:'new')?`<div class="spadm" data-id="${x?esc(x.id):''}"><input class="inp" data-f="name" maxlength="40" placeholder="공간 이름 (예: 인도네시아어 1반)" value="${x?esc(x.name):''}" aria-label="공간 이름"><div class="file"><button class="btn main" data-a="save">저장</button><button class="btn" data-a="cancel">취소</button></div></div>`
@@ -1330,7 +1423,7 @@ $('#authForm').addEventListener('submit',async e=>{
   finally{$('#auGo').disabled=false}
 });
 async function loggedIn(d){
-  B.session=pref.get('session','');B.me=d.id;B.login=d.login;B.name=d.name;B.canAdd=true;joinTried='';
+  B.session=pref.get('session','');B.me=d.id;B.login=d.login;B.name=d.name;B.canAdd=true;joinTried='';pref.set('meCache',JSON.stringify({id:d.id,login:d.login,name:d.name}));
   accountUI();show('#auth',false);const next=afterLogin;afterLogin='';goLib();if(next==='add')openForm();
   const old=pref.get('token','');
   if(old){try{const {data}=await sb.rpc('claim_sets',{p_token:B.session,p_key:old});if(data>0)note(`이 기기에서 예전에 올린 세트 ${data}개를 내 계정으로 옮겼어요.`)}catch(e){}pref.set('token','')}
@@ -1339,7 +1432,7 @@ async function loggedIn(d){
 async function logout(expired){
   stop();
   if(!expired&&B.session){try{await sb.rpc('sign_out',{p_token:B.session})}catch(e){}}
-  pref.set('session','');pref.set('admin','');Object.assign(B,{session:'',me:null,login:'',name:'',admin:false,adminKey:'',canAdd:false,inbox:[],folder:null,spaces:[],rawSets:[],rawFolders:[]});spaceUI();seenInbox=0;renderInbox();document.title='쉐도잉 스크립트';S.set=null;
+  pref.set('session','');pref.set('admin','');pref.set('meCache','');Object.assign(B,{session:'',me:null,login:'',name:'',admin:false,adminKey:'',canAdd:false,inbox:[],folder:null,spaces:[],rawSets:[],rawFolders:[]});spaceUI();seenInbox=0;renderInbox();document.title='쉐도잉 스크립트';S.set=null;
   accountUI();
   if(expired){showAuth(AUTH_ERR.auth)}else{goLib();note('로그아웃했어요. 전체 공개 세트는 계속 볼 수 있어요.')}
   load();
@@ -1397,9 +1490,16 @@ function startLib(){
   });
   renderLib();
 }
+if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)&&!/\/tests\//.test(location.pathname))navigator.serviceWorker.register('sw.js').catch(()=>{});
 (async()=>{
   const ok=CONFIG.url&&CONFIG.key&&!/YOUR|여기/.test(CONFIG.url+CONFIG.key)&&window.supabase&&window.supabase.createClient;
   if(ok){try{sb=window.supabase.createClient(CONFIG.url,CONFIG.key,{auth:{persistSession:false,autoRefreshToken:false}})}catch(e){sb=null}}
+  await offLoad();
+  const cachedMe=t=>{try{const m=JSON.parse(pref.get('meCache',''));if(m&&m.id){B.session=t;B.me=m.id;B.login=m.login;B.name=m.name;accountUI()}}catch(e){}};
+  if(!sb&&CONFIG.url&&!/YOUR|여기/.test(CONFIG.url)&&offHas()){
+    // the supabase library didn't load (no internet): open the saved copies
+    B.remote=true;B.canAdd=false;const t=pref.get('session','');if(t)cachedMe(t);accountUI();enterOffline();goLib();startLib();return;
+  }
   if(!sb){
     B.remote=false;B.admin=true;B.canAdd=true;B.me='local';show('#meBtn',false);show('#lib',true);
     note(CONFIG.url&&!/YOUR/.test(CONFIG.url)?'서버에 연결하지 못해 이 브라우저에만 저장돼요. 설정을 확인해 주세요.':'아직 서버 설정 전이라 이 브라우저에만 저장돼요. 설정 방법은 README를 참고하세요.');
@@ -1413,8 +1513,9 @@ function startLib(){
   if(t){
     try{const {data,error}=await sb.rpc('me',{p_token:t});
       if(!error&&data&&data.id){await loggedIn(data);return}
-      if(!error){pref.set('session','');note('로그인이 만료됐어요. 대본을 추가하려면 다시 로그인해 주세요.')}}
-    catch(e){}
+      if(!error){pref.set('session','');note('로그인이 만료됐어요. 대본을 추가하려면 다시 로그인해 주세요.')}
+      else if(offHas())cachedMe(t)}
+    catch(e){if(offHas())cachedMe(t)}
   }
   goLib();startLib();
 })();

@@ -23,6 +23,9 @@ The repo is connected to Supabase's GitHub integration ("Deploy to production" o
 - `admin-settings.sql` — sets the admin key hash and join code; the owner runs it by hand in SQL Editor and
   never commits real values. Until it runs, the init migration's random placeholder locks sign-up and admin.
 - `README.md` — setup guide for the (non-developer) site owner, in Korean.
+- `sw.js`, `manifest.webmanifest`, `icon-*.png`, `apple-touch-icon.png` — home-screen app + offline. The service worker
+  only keeps the page shell, supabase-js and fonts (`naskah-shell-vN`; bump N when `CORE` changes). It never caches
+  scripts or recordings: the page saves only what the user picks ("오프라인 저장", see below).
 - `tests/e2e_test.py` — Playwright UI test against `tests/mock-supabase.js` (no network needed).
 - `tests/db_test.mjs` — runs all migrations (twice) and `admin-settings.sql` in PGlite (in-process Postgres)
   and checks permissions.
@@ -98,4 +101,10 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
 - Don't put the Supabase `service_role`/secret key anywhere in this repo; only the anon/publishable key.
 - Script lines starting with `#` are notes: `parseScript` keeps them out of the items (so `segs`/`spk`/`pr` indexes
   don't move) and returns them as `items.notes` (`{at, t}` = shown before line `at`). Editing only notes keeps `segs`.
+- Offline saves (`/* ---------- offline saves` in index.html): IndexedDB `naskah-off` holds `idx` (`OFF.sets[id]={row,own,via,size}`,
+  `OFF.folders`, `OFF.spaces`) and `aud:<id>` recording blobs. Nothing is saved automatically on play. `offSync()` runs after
+  every successful `load()` (refreshes rows/audio, adds sets newly put in a saved folder). When `load()` fails and something
+  is saved, `enterOffline()` swaps `B.rawSets/rawFolders/spaces` for the saved copies and sets `B.offline` (read-only:
+  `canModify` is false, `body.offline` hides network-only buttons). `getAudio` prefers the saved blob.
+  The mock goes "offline" when localStorage `sbmock.down` is set.
 - Backups use `app: 'latihan-naskah'` in the JSON — keep that id so older backups still import.

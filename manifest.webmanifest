@@ -1,0 +1,15 @@
+{
+  "name": "쉐도잉 스크립트",
+  "short_name": "쉐도잉",
+  "description": "외국어 대본을 멘트별로 듣고 따라 말하는 쉐도잉 연습장",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#c8102e",
+  "theme_color": "#c8102e",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
