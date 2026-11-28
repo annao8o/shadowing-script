@@ -123,9 +123,9 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
 - List order is per person (no sort menu): `list_orders` (`get_orders`/`save_order`) holds, per account and list
   (`top:<space id>` or `folder:<folder id>`), the keys `f:<id>`/`s:<id>` in order. The page mirrors it in localStorage
   (`naskah.orders.u.<account>`; signed-out people only have `naskah.orders`). `ordered()` puts items missing from the
-  saved order (new ones) on top; with no saved order it is folders first, then latest edited. Every row has a ≡
-  handle: touch needs a ~0.3s hold before dragging (moving earlier cancels), a mouse drags at once, arrow keys move
-  one step. A drag stays within its group (pinned / own) and the shown order is merged into the full order
+  saved order (new ones) on top; with no saved order it is folders first, then latest edited. Cards are dragged
+  directly (no handle): touch needs a ~0.4s still hold (moving earlier scrolls as usual), a mouse drags after 6px,
+  Alt+↑/↓ on a focused card moves one step; the click right after a drag is swallowed (`eatClick`). A drag stays within its group (pinned / own) and the shown order is merged into the full order
   (`mergeOrder`, the list may be filtered by language). `renderLib` skips while a drag is on.
 - Admin pins: `list_pins` (anyone reads) / `save_pins` (admin key, signed in) keep per list the keys shown on top for
   everyone, in the admin's order. `arrange()` = pinned first, then `ordered()`. The two groups
