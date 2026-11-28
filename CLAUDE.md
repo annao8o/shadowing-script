@@ -94,8 +94,12 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
 - Clip playback stops via `armStop()` (a timer that re-arms closer to the end), not animation frames, which browsers
   throttle in the background; keep it that way or clips run into the next line.
 - At play time `playEnd(i)` trims a clip to its voice: if the saved end sits on sound right before the next line it
-  is pulled back to the quietest point, and trailing silence is cut to 0.12s. Saved `segs` are not changed;
+  is pulled back to the quietest point, and trailing silence is cut to 0.12s. A segment whose end was set by hand in
+  구간 수정 carries `m:1` and is played exactly. Editing never lets lines overlap: moving an end past the next line's
+  start pushes that start along (and a start moved before the previous end pulls that end back).
   `playRange` (구간 수정 previews) plays the saved values exactly.
+- Pause (`pausePlay`) keeps `S.paused` (line, rep count, audio position or the pending follow-along step); the play
+  button resumes from there (`resume`). Tapping a line, prev/next or opening a set starts fresh.
 - Keep user-facing text in plain, friendly Korean (해요체), matching the existing copy.
 - Mobile first: 44px touch targets, layout checked at 390px wide.
 - Don't put the Supabase `service_role`/secret key anywhere in this repo; only the anon/publishable key.

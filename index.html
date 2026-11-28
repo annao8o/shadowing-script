@@ -340,6 +340,7 @@ body.pred .pre{display:block}
     <div class="del hidden" id="offBox"><button class="btn" id="offBtn">오프라인 저장</button><span id="offState"></span></div>
     <div class="del hidden" id="leaveBox"><button class="btn" id="leaveBtn">내 목록에서 빼기</button><span>공유받은 세트예요</span></div>
     <div class="del hidden" id="delBox"><button class="btn" id="delBtn">휴지통으로 이동</button></div>
+    <div class="del"><button class="btn" id="backBtn2">← 목록으로 돌아가기</button></div>
   </section>
 </main>
 <div class="bar hidden" id="bar">
@@ -673,7 +674,7 @@ async function purgeSet(set){
   await load();
 }
 let segT=0,spkT=0;
-const saveSegs=()=>{clearTimeout(segT);segT=setTimeout(()=>S.set&&patchSet(S.set,{segs:S.segs.map(g=>({s:g.s,e:g.e}))}),700)};
+const saveSegs=()=>{clearTimeout(segT);segT=setTimeout(()=>S.set&&patchSet(S.set,{segs:S.segs.map(g=>g.m?{s:g.s,e:g.e,m:1}:{s:g.s,e:g.e})}),700)};
 // a line can have several speakers: in memory always a list; stored as '' (none), 'A' (one) or ['A','B'] (several)
 const spkList=x=>Array.isArray(x)?[...new Set(x.map(v=>String(v||'').trim()).filter(Boolean))]:x?[String(x)]:[];
 const spkOut=a=>a.length===0?'':a.length===1?a[0]:a.slice();
@@ -833,9 +834,9 @@ async function decode(blob){
 function setAudio(blob){try{if(au.src&&au.src.startsWith('blob:'))URL.revokeObjectURL(au.src)}catch(e){}if(blob){au.src=URL.createObjectURL(blob);au.load()}else au.removeAttribute('src')}
 let openTok=0;
 async function openSet(set){
-  const my=++openTok;stop();
+  const my=++openTok;stop();S.paused=null;
   S.set=set;S.lang=set.lang||'id';S.tts=!!set.tts;S.items=parseScript(set.script,set.mode||'auto',set.fmt===2?'pk':'kp');S.notes=S.items.notes||[];S.cur=-1;S.pk=null;S.dur=set.dur||0;S.filter=null;S.newSpk=-1;
-  S.segs=(set.segs&&set.segs.length===S.items.length)?set.segs.map(g=>({s:+g.s,e:+g.e})):S.items.map(()=>({s:0,e:0}));
+  S.segs=(set.segs&&set.segs.length===S.items.length)?set.segs.map(g=>g.m?{s:+g.s,e:+g.e,m:1}:{s:+g.s,e:+g.e}):S.items.map(()=>({s:0,e:0}));
   S.spk=(set.spk&&set.spk.length===S.items.length)?set.spk.map(spkList):S.items.map(i=>spkList(i.sp));
   S.pr=(set.pr&&set.pr.length===S.items.length)?set.pr.map(x=>String(x||'')):S.items.map(()=>'');
   setRoute('set='+set.id);
@@ -1028,7 +1029,7 @@ function mark(){
   const it=S.items[S.cur];
   $('#nowT').textContent=it?(S.cur+1)+'. '+(S.spk[S.cur].length?S.spk[S.cur].join(', ')+': ':'')+it.t:'멘트를 눌러 들어 보세요';
   const rep=+$('#rep').value;
-  $('#nowS').textContent=it?(S.resting?'따라 말해 보세요…':(rep===1?'':'반복 '+(rep===0?'계속':(rep-S.left+1)+' / '+rep))):(S.filter?S.filter+'의 멘트만 보는 중':'');
+  $('#nowS').textContent=it?(!S.playing&&S.paused&&S.paused.cur===S.cur?'일시정지 · 재생을 누르면 멈춘 곳부터 이어서 들려요':S.resting?'따라 말해 보세요…':(rep===1?'':'반복 '+(rep===0?'계속':(rep-S.left+1)+' / '+rep))):(S.filter?S.filter+'의 멘트만 보는 중':'');
   setPP();
 }
 
@@ -1073,6 +1074,7 @@ function levels(){if(lvl&&lvl.pk===S.pk)return lvl;const a=Array.from(S.pk).sort
   const lo=q(.1),hi=q(.95);lvl={pk:S.pk,thr:Math.max(lo*2.5,lo+0.06*(hi-lo))};return lvl}
 function playEnd(i){
   const g=S.segs[i],pk=S.pk,h=S.hop;if(!g||!pk||!h)return g&&g.e;
+  if(g.m)return g.e; // an end set by hand in 구간 수정 is played as is
   const thr=levels().thr,n=pk.length;
   const loud=f=>{let m=0;for(let k=f-1;k<=f+1;k++)if(k>=0&&k<n&&pk[k]>m)m=pk[k];return m};
   const minF=Math.floor(g.s/h)+Math.round(0.3/h);let fe=Math.min(n-1,Math.floor(g.e/h));
@@ -1106,12 +1108,29 @@ function segEnd(){
   if(rep===0||S.left>0)next=S.cur;
   else if(pressed('#cont')){const k=nextVis(S.cur,1);if(k>=0)next=k}
   if(next===null){S.playing=false;mark();draw();return}
-  S.resting=true;mark();draw();
-  S.timer=setTimeout(()=>{if(!S.playing)return;if(next!==S.cur){S.cur=next;S.left=rep||1;reveal(S.cur)}playCur()},rest);
+  S.resting=true;S.after=next;mark();draw();
+  S.timer=setTimeout(()=>{if(!S.playing)return;goOn(next)},rest);
+}
+function goOn(next){if(next!==S.cur){S.cur=next;S.left=+$('#rep').value||1;reveal(S.cur)}playCur()}
+// pause: remember where we were (mid-clip, or in the follow-along pause) so play continues from there
+function pausePlay(){
+  let p=null;
+  if(!S.temp&&S.cur>=0){
+    if(S.resting)p={cur:S.cur,left:S.left,after:S.after};
+    else if(!S.tts&&au.currentTime<S.stopAt-0.05)p={cur:S.cur,left:S.left,t:au.currentTime,end:S.stopAt,ran:performance.now()-S.t0};
+    else p={cur:S.cur,left:S.left};
+  }
+  stop();S.paused=p;mark();draw();
+}
+function resume(){
+  const p=S.paused;S.paused=null;S.cur=p.cur;S.left=p.left;
+  if(p.after!==undefined){S.playing=true;goOn(p.after);return}
+  if(p.t!==undefined){startSeg(p.t,p.end);S.t0=performance.now()-p.ran;return}
+  playCur();
 }
 const ready=()=>S.items.length&&(S.tts||S.pk);
-function playLine(i){if(i<0)return;stop();S.cur=i;const rep=+$('#rep').value;S.left=rep||1;playCur()}
-function playRange(i,s,e){stop();S.cur=i;S.temp=true;startSeg(s,e)}
+function playLine(i){if(i<0)return;stop();S.paused=null;S.cur=i;const rep=+$('#rep').value;S.left=rep||1;playCur()}
+function playRange(i,s,e){stop();S.paused=null;S.cur=i;S.temp=true;startSeg(s,e)}
 const lineEl=i=>list.querySelector(`.ln[data-i="${i}"]`);
 const tgsBottom=()=>{const t=$('.opts.tgs');return t&&!$('#practice').classList.contains('hidden')?Math.max(0,t.getBoundingClientRect().bottom):0};
 function reveal(i){const li=lineEl(i);if(li){const r=li.getBoundingClientRect();if(r.top<tgsBottom()||r.bottom>innerHeight-90)li.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}}
@@ -1158,17 +1177,22 @@ list.addEventListener('click',ev=>{
     if(act==='s+')g.s=Math.min(g.e-0.2,g.s+st);
     if(act==='e-')g.e=Math.max(g.s+0.2,g.e-st);
     if(act==='e+')g.e=Math.min(nx?nx.e-0.2:S.dur,g.e+st);
-    g.s=+g.s.toFixed(3);g.e=+g.e.toFixed(3);
+    g.s=+g.s.toFixed(3);g.e=+g.e.toFixed(3);if(act[0]==='e')g.m=1;
+    // the next line starts after this one ends, and the previous one ends before this one starts
+    if(nx&&nx.s<g.e)nx.s=+Math.min(g.e,nx.e-0.2).toFixed(3);
+    if(prev&&prev.e>g.s){prev.e=+Math.max(g.s,prev.s+0.2).toFixed(3);prev.m=1}
+    mark();
     act[0]==='s'?playRange(i,g.s,Math.min(g.e,g.s+1.6)):playRange(i,Math.max(g.s,g.e-1.6),g.e);
     saveSegs();return;
   }
   if(ev.target.closest('.spe,.ed,.pre'))return;
   if(document.body.classList.contains('hid')&&ev.target.closest('.tx')){li.classList.toggle('peek');return}
-  if(i===S.cur&&S.playing){stop();mark();draw();return}
+  if(i===S.cur&&S.playing){pausePlay();return}
   if(!ready())return;
+  if(i===S.cur&&S.paused&&S.paused.cur===i&&ev.target.closest('.pl')){resume();return}
   playLine(i);
 });
-$('#pp').onclick=()=>{if(S.playing){stop();mark();draw()}else if(ready())playLine(S.cur>=0&&visible(S.cur)?S.cur:firstVis())};
+$('#pp').onclick=()=>{if(S.playing){pausePlay();return}if(!ready())return;if(S.paused&&S.paused.cur===S.cur&&visible(S.cur)){resume();return}playLine(S.cur>=0&&visible(S.cur)?S.cur:firstVis())};
 $('#prev').onclick=()=>{if(!ready())return;const k=S.cur<0?firstVis():nextVis(S.cur,-1);if(k>=0){playLine(k);reveal(k)}};
 $('#next').onclick=()=>{if(!ready())return;const k=S.cur<0?firstVis():nextVis(S.cur,1);if(k>=0){playLine(k);reveal(k)}};
 const tog=(id,fn)=>$(id).addEventListener('click',()=>{const b=$(id),on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',on);fn(on)});
@@ -1188,7 +1212,7 @@ $('#go').onclick=()=>EDIT?saveEdit():saveForm(false);
 $('#ttsGo').onclick=()=>saveForm(true);
 $('#addBtn').onclick=()=>{if(B.remote&&!B.session){showAuth('대본을 추가하려면 로그인해 주세요. 처음이면 회원가입을 눌러 주세요.','add');return}openForm()};
 $('#cancel').onclick=()=>{if(EDIT){EDIT=null;clearForm();msg('')}goLib()};
-$('#backBtn').onclick=goLib;
+$('#backBtn').onclick=goLib;$('#backBtn2').onclick=()=>{goLib();scrollTo(0,0)};
 $('#delBtn').onclick=async()=>{const s=S.set;if(!s)return;$('#delBtn').disabled=true;
   try{await patchSet(s,{deletedAt:Date.now()});goLib();note('휴지통으로 옮겼어요: ‘'+(s.title||'제목 없음')+'’. 목록의 휴지통에서 되살릴 수 있어요.')}catch(e){note('휴지통으로 옮기지 못했어요.')}
   $('#delBtn').disabled=false};
