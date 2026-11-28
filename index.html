@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#1b1c20" media="(prefers-color-scheme: dark)"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="쉐도잉">
-<title>쉐도잉 스크립트</title>
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#1b1c20" media="(prefers-color-scheme: dark)"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="The Black Cross">
+<title>The Black Cross</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -261,7 +261,7 @@ body.pred .pre{display:block}
 </head>
 <body>
 <header class="top"><div class="wrap">
-  <div class="toprow"><h1><a href="./" id="homeLink"><span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 10h2v4H3zm4-3h2v10H7zm4-4h2v18h-2zm4 4h2v10h-2zm4 3h2v4h-2z"/></svg></span>Shadowing Script</a></h1><button class="spbtn hidden" id="spBtn" aria-label="공간 이동"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg><span id="spName">공간</span><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg></button></div>
+  <div class="toprow"><h1><a href="./" id="homeLink"><span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 10h2v4H3zm4-3h2v10H7zm4-4h2v18h-2zm4 4h2v10h-2zm4 3h2v4h-2z"/></svg></span>The Black Cross</a></h1><button class="spbtn hidden" id="spBtn" aria-label="공간 이동"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg><span id="spName">공간</span><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg></button></div>
   <nav class="mtabs hidden" id="mtabs" aria-label="메뉴"><button type="button" id="tabLib" aria-current="page">대본</button><button type="button" id="tabTalk">회화</button></nav>
 </div></header>
 <main class="wrap">
@@ -517,6 +517,41 @@ function findGaps(db,F,frac,minRun){
   const gaps=[];f=first;
   while(f<=last){if(sil[f]){let g=f;while(g<=last&&sil[g])g++;if(g-f>=minRun)gaps.push({a:f,b:g});f=g}else f++}
   return {first,last:last+1,gaps};
+}
+// how alike two lines are (letter-pair overlap); a typo fix scores high, a different sentence low
+function similar(x,y){const g=t=>{const c=String(t).toLowerCase().replace(/[^\p{L}\p{N}]+/gu,''),m=new Map();for(let i=0;i<c.length-1;i++){const k=c.slice(i,i+2);m.set(k,(m.get(k)||0)+1)}return[m,Math.max(0,c.length-1)]};
+  const [A,na]=g(x),[Bm,nb]=g(y);if(!na||!nb)return String(x).trim().toLowerCase()===String(y).trim().toLowerCase();let hit=0;for(const [k,v] of A)hit+=Math.min(v,Bm.get(k)||0);return 2*hit/(na+nb)>=0.5}
+// After a script edit: match old and new lines by text (longest common subsequence). Matched lines keep their
+// segment; a changed stretch with the same number of lines whose texts are alike (typo fixes) keeps the old segments
+// one to one (same recording); any other changed stretch is returned in runs to be re-split inside its own time span.
+function reuseSegs(oldItems,oldSegs,newItems,dur){
+  const n=oldItems.length,m=newItems.length,a=oldItems.map(x=>x.t),b=newItems.map(x=>x.t);
+  const L=Array.from({length:n+1},()=>new Uint16Array(m+1));
+  for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)L[i][j]=a[i]===b[j]?L[i+1][j+1]+1:Math.max(L[i+1][j],L[i][j+1]);
+  const pairs=[];let i=0,j=0;
+  while(i<n&&j<m){if(a[i]===b[j]){pairs.push([i,j]);i++;j++}else if(L[i+1][j]>=L[i][j+1])i++;else j++}
+  pairs.push([n,m]);
+  const cp=g=>g.m?{s:+g.s,e:+g.e,m:1}:{s:+g.s,e:+g.e},segs=new Array(m),runs=[];let pi=-1,pj=-1;
+  for(const [ci,cj] of pairs){
+    const ro=ci-pi-1,rn=cj-pj-1;
+    if(rn>0){
+      if(ro===rn&&a.slice(pi+1,ci).every((t,k)=>similar(t,b[pj+1+k])))for(let k=0;k<rn;k++)segs[pj+1+k]=cp(oldSegs[pi+1+k]);
+      else runs.push({j:pj+1,k:rn,s:ro?+oldSegs[pi+1].s:(pi>=0?+oldSegs[pi].e:0),e:ro?+oldSegs[ci-1].e:(ci<n?+oldSegs[ci].s:dur)});
+    }
+    if(ci<n)segs[cj]=cp(oldSegs[ci]);
+    pi=ci;pj=cj;
+  }
+  return{segs,runs};
+}
+// segments for a few lines inside [s,e] of the recording (falls back to splitting by line length)
+function splitRange(an,s,e,w){
+  const k=w.length,W=w.reduce((x,y)=>x+y,0)||1;e=Math.max(e,s);
+  const even=()=>{let acc=0;return w.map(x=>{const a=s+(e-s)*acc/W;acc+=x;return{s:+a.toFixed(3),e:+(s+(e-s)*acc/W).toFixed(3)}})};
+  if(!an||e-s<0.4*k)return even();
+  const h=an.hop,f0=Math.max(0,Math.floor(s/h)),f1=Math.min(an.F,Math.ceil(e/h));if(f1-f0<20)return even();
+  let out;try{out=segment({db:an.db.subarray(f0,f1),pk:an.pk.subarray(f0,f1),hop:h,F:f1-f0},w)}catch(x){return even()}
+  if(!out||out.length!==k)return even();
+  return out.map(g=>({s:+Math.max(s,g.s+f0*h).toFixed(3),e:+Math.min(e,g.e+f0*h).toFixed(3)}));
 }
 function segment(an,w){
   const N=w.length,h=an.hop,dur=an.F*h;
@@ -1210,6 +1245,14 @@ async function saveEdit(){
   try{
     let blob=null;
     if(toTts){if(!set.tts)Object.assign(d,{tts:true,segs:[],dur:null,name:''})}
+    else if(changed&&!sameLines&&!pickBlob&&Array.isArray(set.segs)&&old.length&&set.segs.length===old.length){
+      // only the changed part of the script gets new segments; untouched lines (and hand fixes) keep theirs
+      const r=reuseSegs(old,set.segs,items,+set.dur||set.segs[set.segs.length-1].e+1);
+      if(r.runs.length){msg('바뀐 줄만 음성을 다시 나누는 중…');await new Promise(r=>setTimeout(r,30));
+        let an=null;try{const b=await getAudio(set);if(b)({an}=await decode(b))}catch(e){an=null}
+        for(const run of r.runs)splitRange(an,run.s,run.e,items.slice(run.j,run.j+run.k).map(i=>i.w)).forEach((g,k)=>{r.segs[run.j+k]=g})}
+      d.segs=r.segs;
+    }
     else if(pickBlob||(changed&&!sameLines)){
       msg(pickBlob?'음성을 분석하는 중… (긴 파일은 몇 초 걸려요)':'바뀐 대본에 맞춰 음성을 다시 나누는 중…');await new Promise(r=>setTimeout(r,30));
       blob=pickBlob||await getAudio(set).catch(()=>null);if(!blob)throw{code:'decode'};
@@ -1622,7 +1665,7 @@ async function loadInbox(){
   try{const {data,error}=await sb.rpc('list_inbox',{p_token:B.session});if(error)return;B.inbox=data||[]}catch(e){return}
   const n=B.inbox.length;
   if(n>seenInbox&&$('#lib').classList.contains('hidden'))note(`새 공유 알림이 ${n-seenInbox}개 왔어요. 목록 화면에서 수락할 수 있어요.`);
-  seenInbox=n;document.title=(n?`(${n}) `:'')+'쉐도잉 스크립트';renderInbox();
+  seenInbox=n;document.title=(n?`(${n}) `:'')+'The Black Cross';renderInbox();
 }
 function renderInbox(){
   const n=B.inbox.length;show('#inboxBtn',n>0);$('#inboxBtn').textContent='알림 '+n;show('#inbox',n>0);
@@ -1710,7 +1753,7 @@ async function loggedIn(d){
 async function logout(expired){
   stop();
   if(!expired&&B.session){try{await sb.rpc('sign_out',{p_token:B.session})}catch(e){}}
-  pref.set('session','');pref.set('admin','');pref.set('meCache','');Object.assign(B,{session:'',me:null,login:'',name:'',admin:false,adminKey:'',canAdd:false,inbox:[],folder:null,spaces:[],rawSets:[],rawFolders:[]});spaceUI();seenInbox=0;renderInbox();document.title='쉐도잉 스크립트';S.set=null;
+  pref.set('session','');pref.set('admin','');pref.set('meCache','');Object.assign(B,{session:'',me:null,login:'',name:'',admin:false,adminKey:'',canAdd:false,inbox:[],folder:null,spaces:[],rawSets:[],rawFolders:[]});spaceUI();seenInbox=0;renderInbox();document.title='The Black Cross';S.set=null;
   accountUI();
   if(expired){showAuth(AUTH_ERR.auth)}else{goLib();note('로그아웃했어요. 전체 공개 세트는 계속 볼 수 있어요.')}
   load();

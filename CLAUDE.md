@@ -1,4 +1,4 @@
-# Shadowing Script (쉐도잉 스크립트)
+# The Black Cross (shadowing-script)
 
 Foreign-language script practice site: a user uploads a script plus one full recording, the page
 auto-splits the audio into one clip per line, and people tap lines to listen, repeat and shadow.
@@ -135,4 +135,8 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
   guests together (`translate_uses`). A mic button fills the box with browser speech recognition (ko-KR) and translates.
   The page adds Hangul pronunciation (`pronounce`, Indonesian/Malay only) and reads it aloud with speechSynthesis;
   the last 10 answers stay in `naskah.askHist`. The DB test stubs the `http` extension with a fake DeepL.
+- Editing a script never re-splits the whole recording: `reuseSegs` matches old/new lines by text (LCS); matched lines
+  keep their segment (hand fixes too), same-size stretches of similar lines (`similar`, letter-pair overlap ≥ 0.5) keep
+  theirs one to one, and only other stretches are re-split inside their own time span (`splitRange` runs `segment` on
+  that slice of the analysis). Notes-only edits keep `segs` untouched. A new recording still re-splits everything.
 - Backups use `app: 'latihan-naskah'` in the JSON — keep that id so older backups still import.
