@@ -242,9 +242,9 @@ body.pred .pre{display:block}
     <div class="sum hi"><button class="back hidden" id="fBack">← 전체 목록</button><span id="hello"></span><button class="meic hidden" id="meIcon" aria-label="내 정보" title="내 정보"><svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm0 14a8 8 0 0 1-6.14-2.88 9.95 9.95 0 0 1 12.28 0A8 8 0 0 1 12 20z"/></svg></button></div>
     <div class="row" style="margin-top:10px"><button class="btn main hidden" id="addBtn">+ 새 대본 추가</button><button class="btn hidden" id="newFld">+ 새 폴더</button><button class="btn hidden" id="inboxBtn">알림</button><button class="btn hidden" id="askBtn" aria-expanded="false" aria-controls="askBox">한국어로 물어보기</button><button class="btn" id="bkBtn">백업</button><button class="btn" id="meBtn">내 정보</button><button class="btn hidden" id="trBtn">휴지통</button></div>
     <div class="askbox hidden" id="askBox" role="region" aria-label="한국어로 물어보기">
-      <label class="f" for="askIn" style="margin-top:0">한국어로 적으면 바로 바꿔서 읽어 줘요</label>
+      <label class="f" for="askIn" style="margin-top:0">한국어로 적거나 말하면 바로 바꿔서 읽어 줘요</label>
       <textarea id="askIn" class="inp" maxlength="300" placeholder="예: 화장실이 어디예요?" autocomplete="off"></textarea>
-      <div class="row"><select id="askLang" class="inp" aria-label="바꿀 언어"></select><button class="btn main" id="askGo">바꾸기</button><button class="btn" id="askClose">닫기</button></div>
+      <div class="row"><select id="askLang" class="inp" aria-label="바꿀 언어"></select><button class="btn main" id="askGo">바꾸기</button><button class="btn hidden" id="askMic" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg><span id="askMicT">말하기</span></button><button class="btn" id="askClose">닫기</button></div>
       <div id="askMsg" class="bkmsg" role="status"></div>
       <ul class="askres" id="askRes" aria-live="polite"></ul>
     </div>
@@ -853,22 +853,38 @@ function sayText(text,lang){if(!SY){$('#askMsg').textContent='이 브라우저�
   stop();try{SY.cancel()}catch(e){}const ut=new SpeechSynthesisUtterance(text);ut.lang=langTts(lang);
   const pre=ut.lang.split('-')[0].toLowerCase(),v=SY.getVoices().find(v=>String(v.lang||'').replace('_','-').toLowerCase().split('-')[0]===pre);if(v)ut.voice=v;
   ut.rate=+(($('#speed')||{}).value||1);SY.speak(ut)}
-const ASK_ERR={not_configured:'아직 번역 설정이 안 돼 있어요. 사이트 주인이 DeepL 키를 넣으면 쓸 수 있어요.',too_many:'오늘 쓸 수 있는 만큼 다 썼어요. 내일 다시 써 주세요.',deepl_quota:'이번 달 DeepL 무료 번역 한도를 다 썼어요. 다음 달에 다시 쓸 수 있어요.',bad_key:'번역 키가 맞지 않아요. 사이트 주인에게 알려 주세요.',bad_text:'300자 이내로 적어 주세요.',bad_lang:'이 언어로는 바꿀 수 없어요.'};
+const ASK_ERR={not_configured:'아직 번역 설정이 안 돼 있어요. 사이트 주인이 DeepL 키를 넣으면 쓸 수 있어요.',too_many:'오늘 쓸 수 있는 만큼 다 썼어요. 내일 다시 써 주세요.',too_many_guest:'오늘 쓸 수 있는 만큼 다 썼어요. 로그인하면 더 쓸 수 있어요.',busy:'오늘은 로그인하지 않은 사람이 쓸 수 있는 번역을 다 썼어요. 로그인하면 계속 쓸 수 있어요.',deepl_quota:'이번 달 DeepL 무료 번역 한도를 다 썼어요. 다음 달에 다시 쓸 수 있어요.',bad_key:'번역 키가 맞지 않아요. 사이트 주인에게 알려 주세요.',bad_text:'300자 이내로 적어 주세요.',bad_lang:'이 언어로는 바꿀 수 없어요.'};
 async function askGo(){
   const ko=$('#askIn').value.trim(),lang=$('#askLang').value;if(!ko){$('#askMsg').textContent='한국어 문장을 적어 주세요.';$('#askIn').focus();return}
   pref.set('askLang',lang);$('#askGo').disabled=true;$('#askMsg').textContent='바꾸는 중…';
-  try{const {data,error}=await sb.rpc('translate_ko',{p_token:B.session,p_text:ko,p_target:DL[lang]});
+  try{const {data,error}=await sb.rpc('translate_ko',{p_token:B.session||null,p_text:ko,p_target:DL[lang]});
     if(error||!data){$('#askMsg').textContent='번역하지 못했어요. 인터넷 연결을 확인하고 다시 해 주세요.';return}
-    if(data.error){if(data.error==='auth'){logout(true);return}$('#askMsg').textContent=ASK_ERR[data.error]||'번역하지 못했어요. 잠시 뒤 다시 해 주세요.';return}
+    if(data.error){if(data.error==='auth'){logout(true);return}$('#askMsg').textContent=ASK_ERR[data.error==='too_many'&&!B.session?'too_many_guest':data.error]||'번역하지 못했어요. 잠시 뒤 다시 해 주세요.';return}
     const h=askHist().filter(x=>!(x.ko===ko&&x.lang===lang));h.unshift({ko,t:data.text,lang});pref.set('askHist',JSON.stringify(h.slice(0,10)));
     $('#askMsg').textContent='';$('#askIn').value='';renderAsk(true);sayText(data.text,lang);
   }catch(e){$('#askMsg').textContent='번역하지 못했어요. 인터넷 연결을 확인하고 다시 해 주세요.'}
   finally{$('#askGo').disabled=false}
 }
-function toggleAsk(on){show('#askBox',on);$('#askBtn').setAttribute('aria-expanded',String(on));if(on){$('#askMsg').textContent='';renderAsk(false);$('#askIn').focus()}}
+function toggleAsk(on){if(!on)micStop();show('#askBox',on);$('#askBtn').setAttribute('aria-expanded',String(on));if(on){$('#askMsg').textContent='';renderAsk(false);$('#askIn').focus()}}
 $('#askBtn').onclick=()=>toggleAsk($('#askBox').classList.contains('hidden'));
 $('#askClose').onclick=()=>{toggleAsk(false);$('#askBtn').focus()};
 $('#askGo').onclick=askGo;
+// speak Korean instead of typing (browser speech recognition: Chrome/Android/Edge and Safari on iPhone)
+const SRec=()=>window.SpeechRecognition||window.webkitSpeechRecognition;
+show('#askMic',!!SRec());
+let rec=null;
+function micStop(){if(rec){try{rec.stop()}catch(e){}}}
+function micUI(on){const b=$('#askMic');b.setAttribute('aria-pressed',String(on));b.classList.toggle('main',on);$('#askMicT').textContent=on?'듣는 중… 멈추기':'말하기'}
+$('#askMic').onclick=()=>{
+  if(rec){micStop();return}const C=SRec();if(!C)return;
+  stop();try{SY&&SY.cancel()}catch(e){}
+  const r=new C();rec=r;r.lang='ko-KR';r.interimResults=true;r.continuous=false;r.maxAlternatives=1;
+  let heard='';micUI(true);$('#askMsg').textContent='듣고 있어요… 한국어로 말해 주세요.';
+  r.onresult=e=>{let fin='',mid='';for(const x of e.results){if(x.isFinal)fin+=x[0].transcript;else mid+=x[0].transcript}heard=(fin+mid).trim();$('#askIn').value=heard};
+  r.onerror=e=>{$('#askMsg').textContent=e.error==='not-allowed'||e.error==='service-not-allowed'?'마이크 사용을 허용해 주세요. 브라우저의 사이트 권한에서 켤 수 있어요.':e.error==='no-speech'?'말소리가 들리지 않았어요. 다시 눌러 말해 주세요.':e.error==='network'?'음성 인식에는 인터넷 연결이 필요해요.':e.error==='aborted'?'':'음성을 알아듣지 못했어요. 다시 해 주세요.'};
+  r.onend=()=>{if(rec===r)rec=null;micUI(false);if(heard){$('#askMsg').textContent='';askGo()}else if($('#askMsg').textContent.startsWith('듣고'))$('#askMsg').textContent=''};
+  try{r.start()}catch(e){rec=null;micUI(false);$('#askMsg').textContent='음성 인식을 시작하지 못했어요. 다시 눌러 주세요.'}
+};
 $('#askIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();askGo()}});
 $('#askRes').addEventListener('click',async e=>{const b=e.target.closest('button[data-say],button[data-cp]');if(!b)return;const x=askHist()[+(b.dataset.say??b.dataset.cp)];if(!x)return;
   if(b.dataset.say!==undefined){sayText(x.t,x.lang);return}
@@ -887,7 +903,7 @@ function renderLib(){
   if(drag)return;
   const noSpace=B.remote&&!B.space;
   const canAddHere=B.remote?!B.offline&&!!B.session&&isMember(B.space):B.canAdd;
-  show('#addBtn',canAddHere);show('#askBtn',B.remote&&!!B.session&&!B.offline);if(!B.session)show('#askBox',false);
+  show('#addBtn',canAddHere);show('#askBtn',B.remote&&!B.offline);
   show('#guestHint',B.remote&&!!B.space&&!B.session);
   show('#guestNote',B.remote&&!B.session&&!!B.space);
   $('#guestHint').textContent='전체 공개 스크립트만 보여요';

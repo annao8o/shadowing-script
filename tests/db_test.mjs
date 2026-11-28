@@ -217,11 +217,25 @@ check(typeof (await q('select * from list_pins')) === 'string', 'pins table not 
 
 console.log('translate (DeepL)');
 const tr = (tok, text, lang) => one('select translate_ko($1,$2,$3)', [tok, text, lang ?? 'ID']);
-check((await tr(null, '안녕하세요')).error === 'auth', 'only signed-in people can translate');
+check((await tr('not-a-session', '안녕하세요')).error === 'auth' && (await tr(null, '안녕하세요')).error === 'not_configured', 'a stale session is refused; guests are allowed');
 check((await tr(ja.token, '안녕하세요')).error === 'not_configured', 'off until the owner adds a DeepL key');
 await db.exec("reset role; update settings set deepl_key = 'test-key:fx' where id = 1; set role anon");
 const t1 = await tr(ja.token, ' 안녕하세요 ');
 check(t1.ok && t1.text === '[ID] 안녕하세요', 'translates Korean to Indonesian');
+const asIp = (ip) => db.exec(`set request.headers = '${JSON.stringify({ 'cf-connecting-ip': ip })}'`);
+await asIp('10.0.0.1');
+check((await tr(null, '안녕하세요')).ok, 'guests (not signed in) can translate');
+for (let i = 0; i < 3; i++) await tr(null, '가'.repeat(300));
+check((await tr(null, '나'.repeat(300))).error === 'too_many', 'each guest address has its own daily limit (1000 characters)');
+await asIp('10.0.0.2');
+check((await tr(null, '나')).ok, 'another address is not affected');
+await db.exec('reset role');
+check((await db.query("select count(*)::int n from translate_uses where guest like '%10.0.0%'")).rows[0].n === 0, 'guest addresses are stored only as a hash');
+await db.exec('set role anon');
+let busy = false;
+for (let ip = 3; ip < 20 && !busy; ip++) { await asIp('10.0.0.' + ip); for (let i = 0; i < 3; i++) if ((await tr(null, '다'.repeat(300))).error === 'busy') busy = true; }
+check(busy && (await tr(ja.token, '라')).ok, 'all guests together stop at 8000 characters a day; members still can');
+await db.exec('reset request.headers');
 await db.exec('reset role');
 const call = (await db.query('select uri, auth, body from extensions.http_log order by ctid desc limit 1')).rows[0];
 await db.exec('set role anon');

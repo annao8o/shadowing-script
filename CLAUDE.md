@@ -123,7 +123,9 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
   (`data-g="p"`/`"o"`) move separately; only an admin sees the pin buttons and can move pinned rows.
 - 한국어로 물어보기: `translate_ko(p_token, p_text, p_target)` (not `translate`, which is a built-in Postgres function) calls
   DeepL from Postgres through Supabase's `http` extension with `settings.deepl_key` (free keys ending `:fx` go to
-  api-free.deepl.com). Signed-in only, 300 chars per call, 200 calls / 3000 chars per person per day (`translate_uses`).
+  api-free.deepl.com). 300 chars per call; signed in: 200 calls / 3000 chars a day per account; signed out: 50 calls /
+  1000 chars a day per hashed client IP (`naskah_client_key()` from the request headers) and 8000 chars a day for all
+  guests together (`translate_uses`). A mic button fills the box with browser speech recognition (ko-KR) and translates.
   The page adds Hangul pronunciation (`pronounce`, Indonesian/Malay only) and reads it aloud with speechSynthesis;
   the last 10 answers stay in `naskah.askHist`. The DB test stubs the `http` extension with a fake DeepL.
 - Backups use `app: 'latihan-naskah'` in the JSON — keep that id so older backups still import.
