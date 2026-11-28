@@ -118,7 +118,10 @@ body.edit .ed{display:flex}
 .ask-pr{font-size:15px;line-height:1.45;margin-top:2px;color:light-dark(#8a2033,#ffb3bf);font-family:"Noto Sans KR",sans-serif;overflow-wrap:anywhere}
 .ask-ko{font-size:14px;color:var(--mute);margin-top:2px;font-family:"Noto Sans KR",sans-serif;overflow-wrap:anywhere}
 .askres .say{flex:none;width:44px;height:44px;border-radius:50%;border:0;background:var(--red);color:#fff;display:grid;place-items:center;padding:0;cursor:pointer}
-.askres .cp{flex:none;min-height:44px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:13px;color:var(--mute)}
+.askops{display:flex;gap:6px;margin-top:6px}
+.askres .cp{flex:none;min-height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:12.5px;color:var(--mute)}
+.askres .adel{flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--mute);display:grid;place-items:center;padding:0}
+.askres .adel:hover,.askres .cp:hover{color:var(--ink);border-color:color-mix(in srgb,var(--ink) 30%,var(--line))}
 body.offline #askBox{display:none!important}
 .offrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px;color:var(--mute)}
 body.offline #inboxBtn,body.offline #meBtn,body.offline #meIcon,body.offline #trBtn,body.offline #guestNote,body.offline #guestHint,body.offline #leaveBox,body.offline #fLeaveRow,body.offline .gear{display:none!important}
@@ -241,6 +244,12 @@ body.pred .pre{display:block}
 .btn{background:var(--card);border-color:var(--line);box-shadow:var(--shadow)}
 .btn:hover:not(:disabled){border-color:color-mix(in srgb,var(--ink) 30%,var(--line))}
 .btn.main{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn{position:relative;min-height:36px;padding:0 14px;font-size:14px}
+.btn::after,.spbtn::after,.back::after,.askres .cp::after,.askres .adel::after{content:"";position:absolute;inset:-5px -2px}
+.askact .btn{min-height:42px;font-size:15px}
+.spbtn{position:relative;min-height:36px;font-size:13.5px}
+.back{position:relative;min-height:32px;font-size:14px}
+.mtabs button{min-height:42px;font-size:15px}
 .btn.warn{background:var(--red);border-color:var(--red);color:#fff}
 .note{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--red);box-shadow:var(--shadow)}
 .onote{border-left-color:var(--mute)}
@@ -740,7 +749,7 @@ function arrange(scope,items){const pk=pinsOf(scope),by=new Map(items.map(x=>[x.
 const ordT={};
 function saveOrder(scope,keys){
   orders()[scope]=keys;pref.set(ordKey(),JSON.stringify(B.orders));
-  if(!B.remote||!B.session||B.offline||!/^(top|folder):[0-9a-f-]{36}$/.test(scope))return;
+  if(!B.remote||!B.session||B.offline||!/^(top|talk|folder):[0-9a-f-]{36}$/.test(scope))return;
   clearTimeout(ordT[scope]);const tok=B.session;
   ordT[scope]=setTimeout(async()=>{delete ordT[scope];try{const {data,error}=await sb.rpc('save_order',{p_token:tok,p_scope:scope,p_items:keys});
     if(error||!data||data.error){if(data&&data.error==='auth'){logout(true);return}note('순서를 저장하지 못했어요. 이 기기에는 남아 있어요.')}}catch(e){}},600);
@@ -958,8 +967,9 @@ const askPr=x=>x.lang==='id'||x.lang==='ms'?pronounce(x.t):'';
 let askOpen=false;
 function renderAsk(fresh){const all=askHist();if(fresh)askOpen=false;const h=askOpen?all:all.slice(0,1);
   show('#askMore',all.length>1);$('#askMore').textContent=askOpen?'접기':`이전 기록 ${all.length-1}개 더보기`;$('#askMore').setAttribute('aria-expanded',String(askOpen));
-  $('#askRes').innerHTML=h.map((x,i)=>`<li${fresh&&i===0?' class="new"':''}><div class="tt"><div class="ask-t" lang="${esc(x.lang)}">${esc(x.t)}</div>${askPr(x)?`<div class="ask-pr">${esc(askPr(x))}</div>`:''}<div class="ask-ko">${esc(x.ko)}${x.lang!=='id'?' · '+esc(langName(x.lang)):''}</div></div>`+
-    `<button class="cp" data-cp="${i}" aria-label="${esc(x.t)} 복사">복사</button><button class="say" data-say="${i}" aria-label="${esc(x.t)} 듣기"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">${PLAY}</svg></button></li>`).join('')}
+  $('#askRes').innerHTML=h.map((x,i)=>`<li${fresh&&i===0?' class="new"':''}><div class="tt"><div class="ask-t" lang="${esc(x.lang)}">${esc(x.t)}</div>${askPr(x)?`<div class="ask-pr">${esc(askPr(x))}</div>`:''}<div class="ask-ko">${esc(x.ko)}${x.lang!=='id'?' · '+esc(langName(x.lang)):''}</div>`+
+    `<div class="askops"><button class="cp" data-cp="${i}" aria-label="${esc(x.t)} 복사">복사</button><button class="adel" data-del="${i}" aria-label="‘${esc(x.ko)}’ 기록 지우기" title="기록 지우기"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button></div></div>`+
+    `<button class="say" data-say="${i}" aria-label="${esc(x.t)} 듣기"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">${PLAY}</svg></button></li>`).join('')}
 function sayText(text,lang){if(!SY){$('#askMsg').textContent='이 브라우저는 소리 내어 읽기를 지원하지 않아요.';return}
   stop();try{SY.cancel()}catch(e){}const ut=new SpeechSynthesisUtterance(text);ut.lang=langTts(lang);
   const pre=ut.lang.split('-')[0].toLowerCase(),v=SY.getVoices().find(v=>String(v.lang||'').replace('_','-').toLowerCase().split('-')[0]===pre);if(v)ut.voice=v;
@@ -1002,7 +1012,8 @@ $('#askMic').onclick=()=>{
   try{r.start()}catch(e){rec=null;micUI(false);$('#askMsg').textContent='음성 인식을 시작하지 못했어요. 다시 눌러 주세요.'}
 };
 $('#askIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();askGo()}});
-$('#askRes').addEventListener('click',async e=>{const b=e.target.closest('button[data-say],button[data-cp]');if(!b)return;const x=askHist()[+(b.dataset.say??b.dataset.cp)];if(!x)return;
+$('#askRes').addEventListener('click',async e=>{const d=e.target.closest('button[data-del]');if(d){const h=askHist();h.splice(+d.dataset.del,1);pref.set('askHist',JSON.stringify(h));renderAsk(false);if(!h.length)askOpen=false;$('#askMsg').textContent='기록을 지웠어요.';return}
+  const b=e.target.closest('button[data-say],button[data-cp]');if(!b)return;const x=askHist()[+(b.dataset.say??b.dataset.cp)];if(!x)return;
   if(b.dataset.say!==undefined){sayText(x.t,x.lang);return}
   try{await navigator.clipboard.writeText(x.t);b.textContent='복사됨';setTimeout(()=>{b.textContent='복사'},1500)}catch(err){$('#askMsg').textContent='복사하지 못했어요. 길게 눌러 직접 복사해 주세요.'}});
 
