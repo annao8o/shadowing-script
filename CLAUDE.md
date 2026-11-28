@@ -55,7 +55,8 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
 3. `pronounce` — rule-based Indonesian/Malay → Hangul pronunciation, with an exceptions table `PRON_EX`.
 4. UI: state objects `S` (current set / playback) and `B` (backend, session, library),
    language table `LANGS`, backend functions (`load`, `addSet`, `patchSet`, `purgeSet`, `getAudio`),
-   library, practice view, speakers, playback (audio element or speechSynthesis), waveform canvas,
+   library, practice view, speakers, playback (audio element or speechSynthesis), waveform canvas (no longer
+   shown: `#wave` is now just a one-line loading/error status, the peaks still feed `playEnd`),
    trash, backup/import, sharing (`Picker`, share panel, inbox), account (login/sign-up, my info), start.
 
 ## Data model and security (supabase/migrations)
@@ -105,8 +106,12 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
 - Keep user-facing text in plain, friendly Korean (해요체), matching the existing copy.
 - Mobile first: 44px touch targets, layout checked at 390px wide.
 - Don't put the Supabase `service_role`/secret key anywhere in this repo; only the anon/publishable key.
-- Script lines starting with `#` are notes: `parseScript` keeps them out of the items (so `segs`/`spk`/`pr` indexes
-  don't move) and returns them as `items.notes` (`{at, t}` = shown before line `at`). Editing only notes keeps `segs`.
+- Script lines starting with `#` are notes (`##` = bold section title, `#` = grey memo): `parseScript` keeps them out of
+  the items (so `segs`/`spk`/`pr` indexes don't move) and returns them as `items.notes` (`{at, t, h}` = shown before
+  line `at`; `h` = title). Editing only notes keeps `segs`.
+- Two top tabs: 대본 (library and everything else) and 회화 (`#talk`, the 한국어로 물어보기 box). `show(view, true)` for
+  any main view closes 회화; `openTalk()` opens it (route `#talk`). `setMainTab` marks the tab (the login form has its
+  own `setTab`).
 - Offline saves (`/* ---------- offline saves` in index.html): IndexedDB `naskah-off` holds `idx` (`OFF.sets[id]={row,own,via,size}`,
   `OFF.folders`, `OFF.spaces`) and `aud:<id>` recording blobs. Nothing is saved automatically on play. `offSync()` runs after
   every successful `load()` (refreshes rows/audio, adds sets newly put in a saved folder). When `load()` fails and something
