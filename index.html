@@ -58,13 +58,14 @@ textarea{width:100%;min-height:170px;border:1px solid var(--line);border-radius:
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px}
 select{min-height:44px;border-radius:999px;border:1px solid var(--line);background:var(--chip);padding:0 12px;font-size:16px}
 #msg{font-size:14.5px;margin-top:12px;color:var(--redink);min-height:1em}
-.opts{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 12px;align-items:center}
-.opts.tgs{position:sticky;top:0;z-index:5;background:var(--bg);margin:-4px calc(-1*max(4vw,14px)) 12px;padding:8px max(4vw,14px);transition:box-shadow .15s}
+.opts{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 10px;align-items:center}
+.opts.tgs{position:sticky;top:0;z-index:5;background:var(--bg);margin:-4px calc(-1*max(4vw,14px)) 10px;padding:7px max(4vw,14px);transition:box-shadow .15s}
 .opts.tgs.stuck{box-shadow:0 1px 0 var(--line),0 6px 12px -8px rgba(0,0,0,.25)}
 @media(max-width:600px){.opts.tgs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain}.opts.tgs::-webkit-scrollbar{display:none}.opts.tgs .tg{flex:none;white-space:nowrap}}
 .opts label{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--mute)}
-.opts select{min-height:40px;font-size:15px;padding:0 10px}
-.tg{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:14px;font-weight:600}
+.opts select{min-height:34px;font-size:14px;padding:0 10px}
+.tg{position:relative;min-height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:13.5px;font-weight:600}
+.tg::after,.sc::after{content:"";position:absolute;inset:-6px -2px}
 .tg[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .sum{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:24px}
 .sum h2{margin:0;font-size:20px}
@@ -107,6 +108,8 @@ body.edit .ed{display:flex}
 .askact{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;margin-top:10px}.askact.one{grid-template-columns:1fr}
 .askact .btn{min-height:50px;justify-content:center;font-size:16px;padding:0 12px}
 .btn.rec{background:var(--red);border-color:var(--red);color:#fff}
+.morebtn{display:block;margin:8px auto 0;min-height:36px;padding:0 14px;border:0;background:none;color:var(--mute);font-size:14px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.morebtn:hover{color:var(--ink)}
 .askres{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
 .askres li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:var(--chip)}
 .askres li.new{outline:2px solid var(--redink)}
@@ -125,6 +128,7 @@ body.offline #inboxBtn,body.offline #bkBtn,body.offline #meBtn,body.offline #meI
 .set b{display:block;font-size:17px;overflow-wrap:anywhere}
 .set small{color:var(--mute);font-size:13.5px}
 .set small.m2{display:block;margin-top:2px}
+.set small.one{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .set .go{margin-inline-start:auto;flex:none;width:40px;height:40px;border-radius:50%;background:var(--red);color:#fff;display:grid;place-items:center}
 .sets li{position:relative}
 .sets li.cfg .set>.tt{padding-inline-end:52px}
@@ -161,7 +165,7 @@ body.offline #inboxBtn,body.offline #bkBtn,body.offline #meBtn,body.offline #meI
 .sets li.drag>.set{box-shadow:0 10px 28px rgba(0,0,0,.25);border-color:color-mix(in srgb,var(--red) 55%,var(--line))}
 .sets.dragging{user-select:none;-webkit-user-select:none}
 .pinb{display:inline-block;width:15px;height:15px;vertical-align:-2px;margin-inline-end:4px;color:var(--redink)}
-.sc{min-height:40px;padding:0 14px;border-radius:999px;border:1.5px solid var(--c,var(--line));background:transparent;font-size:14px;font-weight:700;color:var(--c,var(--ink))}
+.sc{position:relative;min-height:32px;padding:0 12px;border-radius:999px;border:1.5px solid var(--c,var(--line));background:transparent;font-size:13.5px;font-weight:700;color:var(--c,var(--ink))}
 .sc[aria-pressed=true]{background:var(--c,var(--ink));color:var(--bg);border-color:var(--c,var(--ink))}
 .sc small{font-weight:500;opacity:.8;margin-inline-start:4px;font-size:13px}
 .pill+.pill{margin-inline-start:4px}
@@ -298,6 +302,7 @@ body.pred .pre{display:block}
       <div class="askact" id="askAct"><button class="btn hidden" id="askMic" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg><span id="askMicT">말하기</span></button><button class="btn main" id="askGo" type="button">인도네시아어로 바꾸기</button></div>
       <div id="askMsg" class="bkmsg" role="status"></div>
       <ul class="askres" id="askRes" aria-live="polite"></ul>
+      <button class="morebtn hidden" id="askMore" type="button" aria-expanded="false"></button>
     </div>
     <p class="hint offmsg hidden" id="askOff">회화 번역은 인터넷에 연결되면 쓸 수 있어요.</p>
     <div class="row" style="margin-top:10px"><button class="btn main hidden" id="addBtn">+ 새 대본 추가</button><button class="btn hidden" id="newFld">+ 새 폴더</button><button class="btn hidden" id="inboxBtn">알림</button><button class="btn" id="bkBtn">백업</button><button class="btn" id="meBtn">내 정보</button><button class="btn hidden" id="trBtn">휴지통</button></div>
@@ -951,7 +956,9 @@ window.addEventListener('online',()=>{if(!B.remote)return;if(!sb){location.reloa
 const DL={id:'ID',en:'EN-US',ja:'JA',zh:'ZH-HANS',es:'ES',fr:'FR',de:'DE',it:'IT',pt:'PT-BR',ru:'RU',tr:'TR',ar:'AR'};
 const askHist=()=>{try{const a=JSON.parse(pref.get('askHist','[]'));return Array.isArray(a)?a.filter(x=>x&&typeof x.t==='string').slice(0,10):[]}catch(e){return[]}};
 const askPr=x=>x.lang==='id'||x.lang==='ms'?pronounce(x.t):'';
-function renderAsk(fresh){const h=askHist();
+let askOpen=false;
+function renderAsk(fresh){const all=askHist();if(fresh)askOpen=false;const h=askOpen?all:all.slice(0,1);
+  show('#askMore',all.length>1);$('#askMore').textContent=askOpen?'접기':`이전 기록 ${all.length-1}개 더보기`;$('#askMore').setAttribute('aria-expanded',String(askOpen));
   $('#askRes').innerHTML=h.map((x,i)=>`<li${fresh&&i===0?' class="new"':''}><div class="tt"><div class="ask-t" lang="${esc(x.lang)}">${esc(x.t)}</div>${askPr(x)?`<div class="ask-pr">${esc(askPr(x))}</div>`:''}<div class="ask-ko">${esc(x.ko)}${x.lang!=='id'?' · '+esc(langName(x.lang)):''}</div></div>`+
     `<button class="cp" data-cp="${i}" aria-label="${esc(x.t)} 복사">복사</button><button class="say" data-say="${i}" aria-label="${esc(x.t)} 듣기"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">${PLAY}</svg></button></li>`).join('')}
 function sayText(text,lang){if(!SY){$('#askMsg').textContent='이 브라우저는 소리 내어 읽기를 지원하지 않아요.';return}
@@ -959,7 +966,7 @@ function sayText(text,lang){if(!SY){$('#askMsg').textContent='이 브라우저�
   const pre=ut.lang.split('-')[0].toLowerCase(),v=SY.getVoices().find(v=>String(v.lang||'').replace('_','-').toLowerCase().split('-')[0]===pre);if(v)ut.voice=v;
   ut.rate=+(($('#speed')||{}).value||1);SY.speak(ut)}
 const ASK_ERR={not_configured:'아직 번역 설정이 안 돼 있어요. 사이트 주인이 DeepL 키를 넣으면 쓸 수 있어요.',too_many:'오늘 쓸 수 있는 만큼 다 썼어요. 내일 다시 써 주세요.',too_many_guest:'오늘 쓸 수 있는 만큼 다 썼어요. 로그인하면 더 쓸 수 있어요.',busy:'오늘은 로그인하지 않은 사람이 쓸 수 있는 번역을 다 썼어요. 로그인하면 계속 쓸 수 있어요.',deepl_quota:'이번 달 DeepL 무료 번역 한도를 다 썼어요. 다음 달에 다시 쓸 수 있어요.',bad_key:'번역 키가 맞지 않아요. 사이트 주인에게 알려 주세요.',bad_text:'300자 이내로 적어 주세요.',bad_lang:'이 언어로는 바꿀 수 없어요.'};
-async function askGo(){
+async function askGo(){micStop();
   const ko=$('#askIn').value.trim(),lang='id';if(!ko){$('#askMsg').textContent='한국어 문장을 적어 주세요.';$('#askIn').focus();return}
   $('#askGo').disabled=true;$('#askMsg').textContent='바꾸는 중…';
   try{const {data,error}=await sb.rpc('translate_ko',{p_token:B.session||null,p_text:ko,p_target:DL[lang]});
@@ -976,6 +983,7 @@ function goTab(k){if(k!=='talk')micStop();B.kind=k;B.folder=null;EDIT=null;FED=n
 $('#tabTalk').onclick=()=>goTab('talk');
 $('#tabLib').onclick=()=>goTab('script');
 $('#askGo').onclick=askGo;
+$('#askMore').onclick=()=>{askOpen=!askOpen;renderAsk(false)};
 // speak Korean instead of typing (browser speech recognition: Chrome/Android/Edge and Safari on iPhone)
 const SRec=()=>window.SpeechRecognition||window.webkitSpeechRecognition;
 show('#askMic',!!SRec());$('#askAct').classList.toggle('one',!SRec());
@@ -987,9 +995,11 @@ $('#askMic').onclick=()=>{
   stop();try{SY&&SY.cancel()}catch(e){}
   const r=new C();rec=r;r.lang='ko-KR';r.interimResults=true;r.continuous=false;r.maxAlternatives=1;
   let heard='';micUI(true);$('#askMsg').textContent='듣고 있어요… 한국어로 말해 주세요.';
-  r.onresult=e=>{let fin='',mid='';for(const x of e.results){if(x.isFinal)fin+=x[0].transcript;else mid+=x[0].transcript}heard=(fin+mid).trim();$('#askIn').value=heard};
+  let quiet=0;const cap=setTimeout(()=>{try{r.stop()}catch(x){}},15000);
+  r.onresult=e=>{let fin='',mid='';for(const x of e.results){if(x.isFinal)fin+=x[0].transcript;else mid+=x[0].transcript}heard=(fin+mid).trim();$('#askIn').value=heard;
+    clearTimeout(quiet);if(fin.trim()){try{r.stop()}catch(x){}}else quiet=setTimeout(()=>{try{r.stop()}catch(x){}},1500)};
   r.onerror=e=>{$('#askMsg').textContent=e.error==='not-allowed'||e.error==='service-not-allowed'?'마이크 사용을 허용해 주세요. 브라우저의 사이트 권한에서 켤 수 있어요.':e.error==='no-speech'?'말소리가 들리지 않았어요. 다시 눌러 말해 주세요.':e.error==='network'?'음성 인식에는 인터넷 연결이 필요해요.':e.error==='aborted'?'':'음성을 알아듣지 못했어요. 다시 해 주세요.'};
-  r.onend=()=>{if(rec===r)rec=null;micUI(false);if(heard){$('#askMsg').textContent='';askGo()}else if($('#askMsg').textContent.startsWith('듣고'))$('#askMsg').textContent=''};
+  r.onend=()=>{clearTimeout(quiet);clearTimeout(cap);if(rec===r)rec=null;micUI(false);if(heard){$('#askMsg').textContent='';askGo()}else if($('#askMsg').textContent.startsWith('듣고'))$('#askMsg').textContent=''};
   try{r.start()}catch(e){rec=null;micUI(false);$('#askMsg').textContent='음성 인식을 시작하지 못했어요. 다시 눌러 주세요.'}
 };
 $('#askIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();askGo()}});
@@ -1008,7 +1018,7 @@ function rowBits(k,title,pin,cfg){const g=pin?'p':'o',pn=canPin();
 function folderRow(f,pin){const own=myFolder(f),n=B.lib.filter(x=>x.folder===f.id).length,R=rowBits('f:'+f.id,f.title,pin,own);
   const who=own?'<span class="mine">내 폴더</span>':[f.shared_with_me?'공유받음':'',esc(f.owner_name||'')].filter(Boolean).join(' · ');
   const meta=[own?esc(visTxt(f.visibility,f.share_count)):'','스크립트 '+n+'개'].filter(Boolean).map(x=>`<span class="nw">${x}</span>`).join(' · ')+(OFF.folders[f.id]?' · <span class="offb nw">오프라인</span>':'');
-  return `<li${R.attrs}><button class="set" data-fid="${esc(f.id)}"><span class="fic"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${FOLDER}</svg></span><span class="tt"><b>${R.badge}${esc(f.title)}</b>${who?`<small>${who}</small>`:''}<small class="m2">${meta}</small></span><span class="go gr"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">${CHEV}</svg></span></button>${own?`<button class="gear" data-fcfg="${esc(f.id)}" aria-label="‘${esc(f.title)}’ 폴더 설정" title="폴더 설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GEAR}</svg></button>`:''}${R.pin}</li>`}
+  return `<li${R.attrs}><button class="set" data-fid="${esc(f.id)}"><span class="fic"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${FOLDER}</svg></span><span class="tt"><b>${R.badge}${esc(f.title)}</b>${who?`<small>${who}</small>`:''}<small class="m2 one">${meta}</small></span><span class="go gr"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">${CHEV}</svg></span></button>${own?`<button class="gear" data-fcfg="${esc(f.id)}" aria-label="‘${esc(f.title)}’ 폴더 설정" title="폴더 설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GEAR}</svg></button>`:''}${R.pin}</li>`}
 function setRow(s,pin){const its=parseScript(s.script,s.mode||'auto');const sp=new Set((s.spk&&s.spk.length===its.length?s.spk:its.map(i=>i.sp)).flatMap(spkList));
   const who=whoOf(s),cfg=canModify(s),R=rowBits('s:'+s.id,s.title||'제목 없음',pin,cfg);
   return `<li${R.attrs}><button class="set" data-id="${esc(s.id)}"><span class="tt"><b>${R.badge}${esc(s.title||'제목 없음')}</b><small><span class="lt">${esc(langName(s.lang))}</span>${who.replace(/ · $/,'')}</small><small class="m2"><span class="nw">${its.length}개 멘트</span>${sp.size?' · <span class="nw">화자 '+sp.size+'명</span>':''} · <span class="nw">${s.tts?'기계 음성':'녹음 '+fmt(s.dur)}</span>${OFF.sets[s.id]?' · <span class="offb nw">오프라인</span>':''}</small></span><span class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">${PLAY}</svg></span></button>${cfg?`<button class="gear" data-cfg="${esc(s.id)}" aria-label="‘${esc(s.title||'제목 없음')}’ 세트 설정" title="세트 설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GEAR}</svg></button>`:''}${R.pin}</li>`}
