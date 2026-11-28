@@ -116,4 +116,7 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
   (`naskah.orders.u.<account>`; signed-out people only have `naskah.orders`). `ordered()` puts items missing from the
   saved order (new ones) on top; with no saved order it is folders first, then latest edited. 순서 바꾸기 mode
   (`B.reorder`) drags by the ≡ handle with pointer events or moves with ↑↓; `renderLib` skips while a drag is on.
+- Admin pins: `list_pins` (anyone reads) / `save_pins` (admin key, signed in) keep per list the keys shown on top for
+  everyone, in the admin's order. `arrange()` = pinned first, then `ordered()`. In 순서 바꾸기 the two groups
+  (`data-g="p"`/`"o"`) move separately; only an admin sees the pin buttons and can move pinned rows.
 - Backups use `app: 'latihan-naskah'` in the JSON — keep that id so older backups still import.

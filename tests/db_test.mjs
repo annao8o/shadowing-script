@@ -187,6 +187,17 @@ await one('select save_order($1,$2,$3)', [ja.token, 'top:' + S1, []]);
 check(!('top:' + S1 in (await one('select get_orders($1)', [ja.token]))), 'an empty order is removed');
 check(typeof (await q('select * from list_orders')) === 'string', 'orders table not readable directly');
 
+console.log('admin pins (top of everyone\'s list)');
+check(JSON.stringify(await one('select list_pins()')) === '{}', 'no pins at first');
+check((await one('select save_pins($1,$2,$3,$4)', [bu.token, 'wrong', 'top:' + S1, [sk1]])).error === 'forbidden', 'only the admin key can pin');
+check((await one('select save_pins($1,$2,$3,$4)', [null, ADMIN, 'top:' + S1, [sk1]])).error === 'auth', 'the admin must be signed in to pin');
+check((await one('select save_pins($1,$2,$3,$4)', [bu.token, ADMIN, 'top:' + S1, [sk1, fk]])).ok, 'admin pins items');
+check(JSON.stringify((await one('select list_pins()'))['top:' + S1]) === JSON.stringify([sk1, fk]), 'everyone (even guests) reads pins in order');
+check((await one('select save_pins($1,$2,$3,$4)', [bu.token, ADMIN, 'top:' + S1, ['bad']])).error === 'bad_items', 'bad pin items rejected');
+await one('select save_pins($1,$2,$3,$4)', [bu.token, ADMIN, 'top:' + S1, []]);
+check(JSON.stringify(await one('select list_pins()')) === '{}', 'unpinning everything removes the list');
+check(typeof (await q('select * from list_pins')) === 'string', 'pins table not readable directly');
+
 console.log('looking around without logging in');
 const gIds = async (tok = null) => (await one('select list_sets($1)', [tok])).map((r) => r.title);
 const gFolders = async () => (await one('select list_folders($1)', [null])).map((f) => f.title);

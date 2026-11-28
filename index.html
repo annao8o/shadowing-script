@@ -135,6 +135,12 @@ body.offline #inboxBtn,body.offline #bkBtn,body.offline #meBtn,body.offline #meI
 .ro .mv:disabled{opacity:.35;cursor:default}
 .sets li.ro.drag{z-index:5;box-shadow:0 8px 24px rgba(0,0,0,.28);border-color:var(--redink);cursor:grabbing}
 .sets.dragging{user-select:none;-webkit-user-select:none}
+.sets li.rohd{font-size:13px;font-weight:700;color:var(--mute);padding:6px 4px 0;display:flex;align-items:center;gap:6px}
+.ro .pin{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--chip);display:grid;place-items:center;padding:0;cursor:pointer;color:var(--mute)}
+.ro .pin[aria-pressed=true]{background:var(--red);border-color:var(--red);color:#fff}
+.ro .lock{flex:none;font-size:12.5px;color:var(--mute);padding:0 6px;display:inline-flex;align-items:center;gap:4px}
+.sets li.ro.pinned{border-color:color-mix(in srgb,var(--redink) 45%,var(--line))}
+.pinb{display:inline-block;width:15px;height:15px;vertical-align:-2px;margin-inline-end:4px;color:var(--redink)}
 .sc{min-height:40px;padding:0 14px;border-radius:999px;border:1.5px solid var(--c,var(--line));background:transparent;font-size:14px;font-weight:700;color:var(--c,var(--ink))}
 .sc[aria-pressed=true]{background:var(--c,var(--ink));color:var(--bg);border-color:var(--c,var(--ink))}
 .sc small{font-weight:500;opacity:.8;margin-inline-start:4px;font-size:13px}
@@ -582,6 +588,23 @@ function orders(){const k=ordKey();if(B.ordK!==k){B.ordK=k;try{const o=JSON.pars
 const listScope=F=>F?'folder:'+F.id:'top:'+(B.space||'local');
 function ordered(scope,items){const o=orders()[scope];if(!Array.isArray(o)||!o.length)return items;const pos=new Map(o.map((k,i)=>[k,i]));
   return items.filter(x=>!pos.has(x.k)).concat(items.filter(x=>pos.has(x.k)).sort((a,b)=>pos.get(a.k)-pos.get(b.k)))}
+// admin pins: B.pins[scope] = keys shown on top for everyone, in the admin's order (list_pins/save_pins)
+const PIN='<path d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/>';
+const PINB=`<svg class="pinb" viewBox="0 0 24 24" fill="currentColor" role="img" aria-label="고정"><title>모두에게 고정</title>${PIN}</svg>`;
+function pins(){if(!B.pins){try{const o=JSON.parse(pref.get('pins','{}'));B.pins=o&&typeof o==='object'&&!Array.isArray(o)?o:{}}catch(e){B.pins={}}}return B.pins}
+const pinsOf=scope=>Array.isArray(pins()[scope])?pins()[scope]:[];
+let pinSaving=0;
+async function savePins(scope,keys){
+  pins()[scope]=keys;pref.set('pins',JSON.stringify(B.pins));
+  if(!B.remote||!B.session||!B.admin||B.offline)return;pinSaving++;
+  try{const {data,error}=await sb.rpc('save_pins',{p_token:B.session,p_admin:adminArg(),p_scope:scope,p_items:keys});
+    if(error||!data||data.error)note(data&&data.error==='forbidden'?'관리자 모드를 다시 켜 주세요. 고정은 저장되지 않았어요.':'고정을 저장하지 못했어요. 잠시 뒤 다시 해 주세요.')}
+  catch(e){note('고정을 저장하지 못했어요. 인터넷 연결을 확인해 주세요.')}finally{pinSaving--}
+}
+// pinned first (admin's order), then this person's own order
+function arrange(scope,items){const pk=pinsOf(scope),by=new Map(items.map(x=>[x.k,x]));
+  const top=pk.map(k=>by.get(k)).filter(Boolean).map(x=>Object.assign(x,{pin:true}));
+  return top.concat(ordered(scope,items.filter(x=>!pk.includes(x.k))))}
 const ordT={};
 function saveOrder(scope,keys){
   orders()[scope]=keys;pref.set(ordKey(),JSON.stringify(B.orders));
@@ -614,7 +637,8 @@ async function load(){
   if(loading)return;loading=true;
   try{
     const tok=B.session||null;
-    const [{data,error},fr,sr]=await Promise.all([sb.rpc('list_sets',{p_token:tok}),sb.rpc('list_folders',{p_token:tok}),sb.rpc('list_spaces',{p_token:tok})]);
+    const [{data,error},fr,sr,pr]=await Promise.all([sb.rpc('list_sets',{p_token:tok}),sb.rpc('list_folders',{p_token:tok}),sb.rpc('list_spaces',{p_token:tok}),sb.rpc('list_pins')]);
+    if(pr&&!pr.error&&pr.data&&typeof pr.data==='object'&&!Array.isArray(pr.data)&&!pinSaving){B.pins=pr.data;pref.set('pins',JSON.stringify(pr.data))}
     if(error){if(isAuthErr(error)){loading=false;logout(true);return}throw error}
     if(B.offline)leaveOffline();
     B.rawSets=data||[];B.rawFolders=fr&&!fr.error&&Array.isArray(fr.data)?fr.data:[];B.spaces=sr&&!sr.error&&Array.isArray(sr.data)?sr.data:[];
@@ -796,12 +820,12 @@ window.addEventListener('online',()=>{if(!B.remote)return;if(!sb){location.reloa
 /* ---------- library view ---------- */
 function folderInfo(f){const own=myFolder(f),n=B.lib.filter(x=>x.folder===f.id).length;
   return (own?'내 폴더 · '+visTxt(f.visibility,f.share_count):[f.shared_with_me?'공유받음':'',f.owner_name||''].filter(Boolean).join(' · '))+' · 스크립트 '+n+'개'}
-function folderRow(f){const own=myFolder(f),n=B.lib.filter(x=>x.folder===f.id).length;
+function folderRow(f,pin){const own=myFolder(f),n=B.lib.filter(x=>x.folder===f.id).length;
   const info=own?'<span class="mine">내 폴더</span> · '+esc(visTxt(f.visibility,f.share_count)):[f.shared_with_me?'공유받음':'',esc(f.owner_name||'')].filter(Boolean).join(' · ');
-  return `<li${own?' class="cfg"':''}><button class="set" data-fid="${esc(f.id)}"><span class="fic"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${FOLDER}</svg></span><span class="tt"><b>${esc(f.title)}</b><small>${info}${info?' · ':''}스크립트 ${n}개${OFF.folders[f.id]?' · <span class="offb">오프라인</span>':''}</small></span><span class="go gr"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">${CHEV}</svg></span></button>${own?`<button class="gear" data-fcfg="${esc(f.id)}" aria-label="‘${esc(f.title)}’ 폴더 설정" title="폴더 설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GEAR}</svg></button>`:''}</li>`}
-function setRow(s){const its=parseScript(s.script,s.mode||'auto');const sp=new Set((s.spk&&s.spk.length===its.length?s.spk:its.map(i=>i.sp)).flatMap(spkList));
+  return `<li${own?' class="cfg"':''}><button class="set" data-fid="${esc(f.id)}"><span class="fic"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${FOLDER}</svg></span><span class="tt"><b>${pin?PINB:''}${esc(f.title)}</b><small>${info}${info?' · ':''}스크립트 ${n}개${OFF.folders[f.id]?' · <span class="offb">오프라인</span>':''}</small></span><span class="go gr"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">${CHEV}</svg></span></button>${own?`<button class="gear" data-fcfg="${esc(f.id)}" aria-label="‘${esc(f.title)}’ 폴더 설정" title="폴더 설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GEAR}</svg></button>`:''}</li>`}
+function setRow(s,pin){const its=parseScript(s.script,s.mode||'auto');const sp=new Set((s.spk&&s.spk.length===its.length?s.spk:its.map(i=>i.sp)).flatMap(spkList));
   const who=whoOf(s),cfg=canModify(s);
-  return `<li${cfg?' class="cfg"':''}><button class="set" data-id="${esc(s.id)}"><span class="tt"><b>${esc(s.title||'제목 없음')}</b><small><span class="lt">${esc(langName(s.lang))}</span>${who.replace(/ · $/,'')}</small><small class="m2">${its.length}개 멘트${sp.size?' · 화자 '+sp.size+'명':''} · ${s.tts?'기계 음성':'녹음 '+fmt(s.dur)}${OFF.sets[s.id]?' · <span class="offb">오프라인</span>':''}</small></span><span class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">${PLAY}</svg></span></button>${cfg?`<button class="gear" data-cfg="${esc(s.id)}" aria-label="‘${esc(s.title||'제목 없음')}’ 세트 설정" title="세트 설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GEAR}</svg></button>`:''}</li>`}
+  return `<li${cfg?' class="cfg"':''}><button class="set" data-id="${esc(s.id)}"><span class="tt"><b>${pin?PINB:''}${esc(s.title||'제목 없음')}</b><small><span class="lt">${esc(langName(s.lang))}</span>${who.replace(/ · $/,'')}</small><small class="m2">${its.length}개 멘트${sp.size?' · 화자 '+sp.size+'명':''} · ${s.tts?'기계 음성':'녹음 '+fmt(s.dur)}${OFF.sets[s.id]?' · <span class="offb">오프라인</span>':''}</small></span><span class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">${PLAY}</svg></span></button>${cfg?`<button class="gear" data-cfg="${esc(s.id)}" aria-label="‘${esc(s.title||'제목 없음')}’ 세트 설정" title="세트 설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GEAR}</svg></button>`:''}</li>`}
 function renderLib(){
   if(drag)return;
   const noSpace=B.remote&&!B.space;
@@ -836,38 +860,46 @@ function renderLib(){
   const scope=listScope(F),item=x=>x.f?{k:'f:'+x.f.id,f:x.f}:{k:'s:'+x.s.id,s:x.s};
   const canOrder=pool.length+folders.length>1&&!B.offline;if(!canOrder)B.reorder=false;
   show('#ordBtn',canOrder);$('#ordBtn').textContent=B.reorder?'완료':'순서 바꾸기';$('#ordBtn').classList.toggle('main',!!B.reorder);$('#ordBtn').setAttribute('aria-pressed',String(!!B.reorder));
-  show('#ordHint',!!B.reorder);el.classList.toggle('ordering',!!B.reorder);
+  show('#ordHint',!!B.reorder);$('#ordHint').textContent='왼쪽 ≡를 눌러 끌거나 ↑↓로 옮겨요. 바꾼 순서는 바로 저장되고, 새로 생긴 스크립트는 맨 위에 와요.'+(B.reorder&&canPin()?' 오른쪽 핀을 누르면 모든 사람 목록 맨 위에 고정돼요.':'');el.classList.toggle('ordering',!!B.reorder);
   if(B.reorder){ // every item of this list, language filter aside
     show('#langBar',false);
-    const all=ordered(scope,[...folders.map(f=>item({f})),...pool.map(s=>item({s}))]);
-    el.innerHTML=all.map((x,i)=>roRow(x,i,all.length)).join('');return}
-  const all=ordered(scope,[...fShown.map(f=>item({f})),...shown.map(s=>item({s}))]);
-  el.innerHTML=all.map(x=>x.f?folderRow(x.f):setRow(x.s)).join('')||'<li class="empty-l">이 언어로 된 스크립트가 없어요.</li>';
+    const all=arrange(scope,[...folders.map(f=>item({f})),...pool.map(s=>item({s}))]),P=all.filter(x=>x.pin),O=all.filter(x=>!x.pin);
+    el.innerHTML=(P.length?`<li class="rohd">${PINB}모두에게 상단 고정${B.admin?' · 관리자만 바꿀 수 있어요':''}</li>`+P.map((x,i)=>roRow(x,i,P.length)).join('')+'<li class="rohd">내 순서</li>':'')+O.map((x,i)=>roRow(x,i,O.length)).join('');return}
+  const all=arrange(scope,[...fShown.map(f=>item({f})),...shown.map(s=>item({s}))]);
+  el.innerHTML=all.map(x=>x.f?folderRow(x.f,x.pin):setRow(x.s,x.pin)).join('')||'<li class="empty-l">이 언어로 된 스크립트가 없어요.</li>';
 }
 const GRIP='<path d="M4 7h16v2H4zm0 4h16v2H4zm0 4h16v2H4z"/>';
-function roRow(x,i,n){const t=x.f?x.f.title:(x.s.title||'제목 없음');
-  return `<li class="ro" data-k="${esc(x.k)}"><span class="grip" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GRIP}</svg></span><span class="tt"><b>${esc(t)}</b><small>${x.f?'폴더':'스크립트'}</small></span><button class="mv" data-mv="-1" aria-label="‘${esc(t)}’ 위로"${i===0?' disabled':''}>↑</button><button class="mv" data-mv="1" aria-label="‘${esc(t)}’ 아래로"${i===n-1?' disabled':''}>↓</button></li>`}
-const domKeys=()=>[...$('#sets').querySelectorAll('li.ro')].map(li=>li.dataset.k);
+const canPin=()=>B.remote&&!!B.session&&B.admin&&!B.offline;
+function roRow(x,i,n){const t=x.f?x.f.title:(x.s.title||'제목 없음'),g=x.pin?'p':'o',mov=g==='o'||canPin();
+  const pinBtn=canPin()?`<button class="pin" data-pin aria-pressed="${!!x.pin}" aria-label="‘${esc(t)}’ 모두에게 상단 고정" title="모두에게 상단 고정"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">${PIN}</svg></button>`:'';
+  return `<li class="ro${x.pin?' pinned':''}" data-k="${esc(x.k)}" data-g="${g}">${mov?`<span class="grip" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GRIP}</svg></span>`:'<span style="width:10px;flex:none"></span>'}<span class="tt"><b>${esc(t)}</b><small>${x.f?'폴더':'스크립트'}</small></span>`+
+    (mov?`<button class="mv" data-mv="-1" aria-label="‘${esc(t)}’ 위로"${i===0?' disabled':''}>↑</button><button class="mv" data-mv="1" aria-label="‘${esc(t)}’ 아래로"${i===n-1?' disabled':''}>↓</button>`:`<span class="lock">${PINB}관리자 고정</span>`)+pinBtn+'</li>'}
+const domKeys=(g='o')=>[...$('#sets').querySelectorAll(`li.ro[data-g="${g}"]`)].map(li=>li.dataset.k);
+function saveGroup(g,keys){const scope=listScope(fOf(B.folder));if(g==='p')savePins(scope,keys);else saveOrder(scope,keys)}
+function togglePin(k){const scope=listScope(fOf(B.folder)),pk=pinsOf(scope).slice(),i=pk.indexOf(k);if(i>=0)pk.splice(i,1);else pk.push(k);
+  savePins(scope,pk);renderLib();const b=$('#sets').querySelector(`li[data-k="${k}"] button[data-pin]`);if(b)b.focus()}
 $('#ordBtn').onclick=()=>{B.reorder=!B.reorder;renderLib()};
-function moveItem(k,d){const keys=domKeys(),i=keys.indexOf(k),j=i+d;if(i<0||j<0||j>=keys.length)return;[keys[i],keys[j]]=[keys[j],keys[i]];
-  saveOrder(listScope(fOf(B.folder)),keys);renderLib();const b=$('#sets').querySelector(`li[data-k="${k}"] button[data-mv="${d}"]`);if(b&&!b.disabled)b.focus()}
+function moveItem(k,d){const li=$('#sets').querySelector(`li.ro[data-k="${k}"]`);if(!li)return;const g=li.dataset.g,keys=domKeys(g),i=keys.indexOf(k),j=i+d;if(i<0||j<0||j>=keys.length)return;[keys[i],keys[j]]=[keys[j],keys[i]];
+  saveGroup(g,keys);renderLib();const b=$('#sets').querySelector(`li[data-k="${k}"] button[data-mv="${d}"]`);if(b&&!b.disabled)b.focus()}
 // drag by the ≡ handle (mouse or finger); the list scrolls when you hold near the top or bottom edge
 let drag=null;
 $('#sets').addEventListener('pointerdown',e=>{const g=e.target.closest('.grip');if(!g||!B.reorder||drag)return;const li=g.closest('li.ro');if(!li)return;
   e.preventDefault();try{g.setPointerCapture(e.pointerId)}catch(x){}
-  drag={li,g,id:e.pointerId,off:e.clientY-li.getBoundingClientRect().top,y:e.clientY,before:domKeys().join()};li.classList.add('drag');$('#sets').classList.add('dragging');
+  drag={li,g,grp:li.dataset.g,id:e.pointerId,off:e.clientY-li.getBoundingClientRect().top,y:e.clientY,before:domKeys(li.dataset.g).join()};li.classList.add('drag');$('#sets').classList.add('dragging');
   const loop=()=>{if(!drag)return;const y=drag.y,edge=70;if(y<edge)scrollBy(0,-Math.ceil((edge-y)/6));else if(y>innerHeight-edge)scrollBy(0,Math.ceil((y-innerHeight+edge)/6));dragTo(y);drag.raf=requestAnimationFrame(loop)};drag.raf=requestAnimationFrame(loop)});
 function dragTo(y){const li=drag.li;let n;
-  while((n=li.nextElementSibling)&&y>n.getBoundingClientRect().top+n.offsetHeight/2)n.after(li);
-  while((n=li.previousElementSibling)&&y<n.getBoundingClientRect().top+n.offsetHeight/2)n.before(li);
+  const same=n=>n&&n.classList.contains('ro')&&n.dataset.g===drag.grp; // stay within pinned / own group
+  while(same(n=li.nextElementSibling)&&y>n.getBoundingClientRect().top+n.offsetHeight/2)n.after(li);
+  while(same(n=li.previousElementSibling)&&y<n.getBoundingClientRect().top+n.offsetHeight/2)n.before(li);
   li.style.transform='';const nat=li.getBoundingClientRect().top;li.style.transform=`translateY(${y-drag.off-nat}px)`}
 $('#sets').addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;e.preventDefault();drag.y=e.clientY;dragTo(e.clientY)});
-function dragEnd(e){if(!drag||(e&&e.pointerId!==drag.id))return;cancelAnimationFrame(drag.raf);const {li,before}=drag;drag=null;
+function dragEnd(e){if(!drag||(e&&e.pointerId!==drag.id))return;cancelAnimationFrame(drag.raf);const {li,before,grp}=drag;drag=null;
   li.classList.remove('drag');li.style.transform='';$('#sets').classList.remove('dragging');
-  const keys=domKeys();if(keys.join()!==before)saveOrder(listScope(fOf(B.folder)),keys);renderLib()}
+  const keys=domKeys(grp);if(keys.join()!==before)saveGroup(grp,keys);renderLib()}
 $('#sets').addEventListener('pointerup',dragEnd);$('#sets').addEventListener('pointercancel',dragEnd);
 $('#langBar').addEventListener('click',e=>{const b=e.target.closest('.sc');if(!b)return;pref.set('langf',b.dataset.l||'');renderLib()});
 $('#sets').addEventListener('click',e=>{const mv=e.target.closest('button[data-mv]');if(mv){moveItem(mv.closest('li').dataset.k,+mv.dataset.mv);return}
+  const pb=e.target.closest('button[data-pin]');if(pb){togglePin(pb.closest('li').dataset.k);return}
   if(B.reorder)return;const ab=e.target.closest('button[data-act]');if(ab){if(ab.dataset.act==='login')showAuth();return}
   const fg=e.target.closest('.gear[data-fcfg]');if(fg){openFolderForm(fOf(fg.dataset.fcfg));return}
   const g=e.target.closest('.gear[data-cfg]');if(g){const s=B.lib.find(x=>x.id===g.dataset.cfg);if(s)openEdit(s);return}
