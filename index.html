@@ -121,7 +121,7 @@ body.edit .ed{display:flex}
 .askres .cp{flex:none;min-height:44px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:13px;color:var(--mute)}
 body.offline #askBox{display:none!important}
 .offrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px;color:var(--mute)}
-body.offline #inboxBtn,body.offline #bkBtn,body.offline #meBtn,body.offline #meIcon,body.offline #trBtn,body.offline #guestNote,body.offline #guestHint,body.offline #leaveBox,body.offline #fLeaveRow,body.offline .gear{display:none!important}
+body.offline #inboxBtn,body.offline #meBtn,body.offline #meIcon,body.offline #trBtn,body.offline #guestNote,body.offline #guestHint,body.offline #leaveBox,body.offline #fLeaveRow,body.offline .gear{display:none!important}
 .note{margin:16px 0 0;padding:10px 14px;border-radius:12px;background:var(--rose);font-size:14px;position:sticky;top:8px;z-index:6;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08)}
 .sets{list-style:none;margin:12px 0 24px;padding:0;display:grid;gap:8px}
 .set{display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;border:1px solid var(--line);background:var(--card);cursor:pointer;width:100%;text-align:start}
@@ -305,7 +305,7 @@ body.pred .pre{display:block}
       <button class="morebtn hidden" id="askMore" type="button" aria-expanded="false"></button>
     </div>
     <p class="hint offmsg hidden" id="askOff">회화 번역은 인터넷에 연결되면 쓸 수 있어요.</p>
-    <div class="row" style="margin-top:10px"><button class="btn main hidden" id="addBtn">+ 새 대본 추가</button><button class="btn hidden" id="newFld">+ 새 폴더</button><button class="btn hidden" id="inboxBtn">알림</button><button class="btn" id="bkBtn">백업</button><button class="btn" id="meBtn">내 정보</button><button class="btn hidden" id="trBtn">휴지통</button></div>
+    <div class="row" style="margin-top:10px"><button class="btn main hidden" id="addBtn">+ 새 대본 추가</button><button class="btn hidden" id="newFld">+ 새 폴더</button><button class="btn hidden" id="inboxBtn">알림</button><button class="btn" id="meBtn">내 정보</button><button class="btn hidden" id="trBtn">휴지통</button></div>
     <p class="hint hidden" id="guestHint"></p>
     <div class="inbox hidden" id="inbox" role="region" aria-label="공유 알림"></div>
     <div class="fhead hidden" id="fHead">
@@ -316,14 +316,6 @@ body.pred .pre{display:block}
     <div class="libtools"><div class="spkbar hidden" id="langBar" role="group" aria-label="언어별 보기"></div></div>
     <ul class="sets" id="sets"><li class="empty-l">불러오는 중…</li></ul>
     <p class="hint hidden" id="ordTip"></p>
-  </section>
-
-  <section class="setup hidden" id="bk">
-    <h2>백업</h2>
-    <p class="hint" style="margin-top:0">지금 보이는 모든 세트(휴지통 포함)의 대본·화자·발음·구간을 파일 하나로 내려받아요. 이 파일로 언제든 다시 불러올 수 있어요.</p>
-    <label class="chk"><input type="checkbox" id="bkAudio"> 녹음 파일도 포함 (파일이 커지지만 녹음까지 복구 가능)</label>
-    <div class="row"><button class="btn main" id="bkSave">백업 파일 내려받기</button><label class="btn hidden" for="bkIn" id="bkInL">백업 불러오기</label><input type="file" id="bkIn" accept=".json,application/json" class="hidden"><button class="btn" id="bkClose">닫기</button></div>
-    <div id="bkMsg" class="bkmsg" role="status"></div>
   </section>
 
   <section class="setup hidden" id="spaces">
@@ -341,6 +333,7 @@ body.pred .pre{display:block}
 
   <section class="setup hidden" id="me">
     <h2>내 정보</h2>
+    <div id="meAcct">
     <p class="hint" style="margin-top:0" id="meWho"></p>
     <label class="f" for="meName">이름</label>
     <div class="file"><input id="meName" class="inp" style="flex:1;min-width:10em" maxlength="20"><button class="btn" id="meNameSave">저장</button></div>
@@ -357,6 +350,13 @@ body.pred .pre{display:block}
       <input id="rsPw" class="inp" placeholder="새 비밀번호 (6자 이상)" autocomplete="off" style="margin-top:8px">
       <div class="row"><button class="btn" id="rsGo">새 비밀번호로 바꾸기</button></div>
     </div>
+    </div>
+    <label class="f">백업</label>
+    <p class="hint" style="margin-top:0">내가 볼 수 있는 모든 공간의 스크립트(휴지통 포함)를 대본·화자·발음·멘트 구간까지 파일 하나로 한 번에 내려받아요. 이 파일로 언제든 다시 불러올 수 있어요.</p>
+    <label class="chk"><input type="checkbox" id="bkAudio"> 녹음 파일도 포함 (파일이 커지지만 녹음까지 복구할 수 있어요)</label>
+    <div class="row"><button class="btn main" id="bkSave">백업 파일 내려받기</button><label class="btn hidden" for="bkIn" id="bkInL">백업 불러오기</label><input type="file" id="bkIn" accept=".json,application/json" class="hidden"></div>
+    <p class="hint hidden" id="bkInHint">불러온 스크립트는 지금 보고 있는 공간에 들어가요. 이미 있는 스크립트는 건너뛰어요.</p>
+    <div id="bkMsg" class="bkmsg" role="status"></div>
     <div class="row"><button class="btn" id="logoutBtn">로그아웃</button><button class="btn" id="meClose">닫기</button></div>
     <div id="meMsg" class="bkmsg" role="status"></div>
   </section>
@@ -687,7 +687,7 @@ function setRoute(r){const h=r?'#'+r:'';if(location.hash===h)return;try{history.
 const B={kind:'script',spaces:[],space:null,rawSets:[],rawFolders:[],folders:[],folder:null,inbox:[],remote:false,session:'',me:null,login:'',name:'',admin:false,adminKey:'',canAdd:false,needCode:false,all:[],lib:[]};
 function setAll(arr){B.all=sortLib(arr);B.lib=B.all.filter(s=>!s.deletedAt)}
 const SY=window.speechSynthesis;let voices=[],raf=0,stopT=0;
-const VIEWS=new Set(['#lib','#practice','#setup','#fldForm','#spaces','#bk','#trash','#me','#auth']);
+const VIEWS=new Set(['#lib','#practice','#setup','#fldForm','#spaces','#trash','#me','#auth']);
 const show=(id,on)=>{$(id).classList.toggle('hidden',!on);if(on&&VIEWS.has(id))setMainTab(B.kind)};
 const pressed=id=>$(id).getAttribute('aria-pressed')==='true';
 function msg(t){$('#msg').textContent=t||''}
@@ -802,7 +802,6 @@ function applySpace(){
 }
 function spaceUI(){
   const on=B.remote&&(B.spaces.length>0||B.admin);show('#spBtn',on);
-  show('#bkBtn',!B.remote||!!B.session);
   const sp=spaceOf(B.space);$('#spName').textContent=sp?sp.name:'공간';
 }
 function switchSpace(id){if(id===B.space)return;B.space=id;B.folder=null;pref.set('space',id);applySpace();joinSpace(id)}
@@ -1114,7 +1113,7 @@ $('#sets').addEventListener('click',e=>{
   const fg=e.target.closest('.gear[data-fcfg]');if(fg){openFolderForm(fOf(fg.dataset.fcfg));return}
   const g=e.target.closest('.gear[data-cfg]');if(g){const s=B.lib.find(x=>x.id===g.dataset.cfg);if(s)openEdit(s);return}
   const fb=e.target.closest('.set[data-fid]');if(fb){B.folder=fb.dataset.fid;renderLib();scrollTo(0,0);return}const b=e.target.closest('.set');if(!b)return;const s=B.lib.find(x=>x.id===b.dataset.id);if(s)openSet(s)});
-function goLib(){stop();S.set=null;S.cur=-1;show('#practice',false);show('#setup',false);show('#fldForm',false);show('#spaces',false);show('#bk',false);show('#trash',false);show('#me',false);show('#auth',false);show('#lib',true);show('#bar',false);
+function goLib(){stop();S.set=null;S.cur=-1;show('#practice',false);show('#setup',false);show('#fldForm',false);show('#spaces',false);show('#trash',false);show('#me',false);show('#auth',false);show('#lib',true);show('#bar',false);
   S.pk=null;$('#wave').style.height='';show('#wEmpty',true);$('#wEmpty').textContent='';cv.classList.add('hidden');renderLib()}
 
 /* ---------- open a set ---------- */
@@ -1559,15 +1558,13 @@ $('#trBack').onclick=goLib;
 
 /* ---------- backup ---------- */
 function bkMsg(t){$('#bkMsg').textContent=t||''}
-$('#bkBtn').onclick=()=>{if(B.remote&&!B.session){showAuth('백업하려면 로그인해 주세요.');return}show('#lib',false);show('#bk',true);show('#bkInL',B.canAdd);bkMsg('')};
-$('#bkClose').onclick=goLib;
-const KEEP=['fmt','title','script','mode','tts','segs','spk','pr','dur','name','lang','visibility','createdAt','updatedAt','deletedAt'];
+const KEEP=['fmt','title','script','mode','tts','segs','spk','pr','dur','name','lang','visibility','kind','createdAt','updatedAt','deletedAt'];
 $('#bkSave').onclick=async()=>{
   const withAudio=$('#bkAudio').checked;$('#bkSave').disabled=true;
   try{
-    const sets=[];let i=0;
-    for(const s of B.all){
-      i++;bkMsg(`정리하는 중… ${i}/${B.all.length}`);
+    const sets=[];let i=0;const every=B.remote?B.rawSets.map(rowToSet):B.all;
+    for(const s of every){
+      i++;bkMsg(`정리하는 중… ${i}/${every.length}`);
       const o={};for(const k of KEEP)if(s[k]!=null)o[k]=s[k];
       if(s.author)o.by=s.author;
       if(s.audio)o.audio={path:s.audio.path,mime:s.audio.mime};
@@ -1586,14 +1583,15 @@ $('#bkIn').onchange=async e=>{
   const f=e.target.files[0];e.target.value='';if(!f)return;
   let j;try{j=JSON.parse(await f.text())}catch(x){bkMsg('백업 파일을 읽지 못했어요.');return}
   if(!j||j.app!=='latihan-naskah'||!Array.isArray(j.sets)){bkMsg('이 페이지의 백업 파일이 아니에요.');return}
-  let ok=0,skip=0,fail=0;const notes=[];
+  let ok=0,skip=0,fail=0;const notes=[];const have=B.remote?B.rawSets.map(rowToSet):B.all; // any space counts as already there
   for(const s of j.sets){
     const script=str(s.script,60000);if(!script){fail++;continue}
     const title=str(s.title,80)||'제목 없음';
-    if(B.all.some(x=>x.script===script&&x.title===title&&!x.deletedAt)){skip++;continue}
+    if(have.some(x=>x.script===script&&x.title===title&&!x.deletedAt)){skip++;continue}
     const n=parseScript(script,s.mode,s.fmt===2?'pk':'kp').length,arr=(a,f)=>Array.isArray(a)&&a.length===n?a.map(f):undefined;
     const data={title,script,mode:['auto','line','sentence'].includes(s.mode)?s.mode:'auto',tts:!!s.tts};
     if(s.fmt===2)data.fmt=2;
+    if(s.kind==='talk')data.kind='talk';
     data.lang=typeof s.lang==='string'&&/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/.test(s.lang)?s.lang:'id';
     if(B.remote)data.visibility=s.visibility==='private'||s.visibility==='partial'?'private':'public';
     const segs=arr(s.segs,g=>({s:+g.s||0,e:+g.e||0}));if(segs)data.segs=segs;
@@ -1711,7 +1709,7 @@ $('#note').addEventListener('click',()=>note(''));
 let spEdit=null;
 function spMsg(t){$('#spMsg').textContent=t||''}
 function openSpaces(){if(!B.remote)return;
-  stop();for(const id of ['#lib','#practice','#setup','#fldForm','#bk','#trash','#me','#bar'])show(id,false);show('#spaces',true);spEdit=null;spMsg('');renderSpaces();scrollTo(0,0)}
+  stop();for(const id of ['#lib','#practice','#setup','#fldForm','#trash','#me','#bar'])show(id,false);show('#spaces',true);spEdit=null;spMsg('');renderSpaces();scrollTo(0,0)}
 function renderSpaces(){
   const my=viewSpaces();
   $('#spList').innerHTML=my.length?my.map(x=>`<li><button class="sp" data-sp="${esc(x.id)}" aria-current="${x.id===B.space}"><span>${esc(x.name)}<br><small>${B.offline?'오프라인 저장한 스크립트':x.member?`멤버 ${+x.members||0}명`:B.session?'들어가면 멤버가 돼요':'전체 공개 스크립트만 보여요'}${x.id===B.space?' · 지금 보는 공간':''}</small></span>${x.id===B.space?'<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>':''}</button></li>`).join('')
@@ -1749,7 +1747,7 @@ function setTab(up){upMode=up;$('#tabIn').setAttribute('aria-pressed',String(!up
   $('#auGo').textContent=up?'가입하고 시작하기':'로그인';$('#auPw').setAttribute('autocomplete',up?'new-password':'current-password');auMsg('')}
 $('#tabIn').onclick=()=>setTab(false);$('#tabUp').onclick=()=>setTab(true);
 let afterLogin='';
-function showAuth(reason,then){stop();afterLogin=then||'';for(const id of ['#lib','#practice','#setup','#bk','#trash','#me','#bar'])show(id,false);show('#auth',true);setTab(false);
+function showAuth(reason,then){stop();afterLogin=then||'';for(const id of ['#lib','#practice','#setup','#trash','#me','#bar'])show(id,false);show('#auth',true);setTab(false);
   $('#authWhy').textContent=reason||'로그인하면 대본을 추가하고, 내 세트를 고치고, 공유 알림을 받을 수 있어요.';
   $('#wave').style.height='';show('#wEmpty',true);$('#wEmpty').textContent='';cv.classList.add('hidden');scrollTo(0,0)}
 function accountUI(){spaceUI();show('#mtabs',B.remote);$('#meBtn').textContent='로그인';show('#meBtn',!B.session);show('#meIcon',!!B.session);$('#hello').textContent=B.session?B.name+' 님':'로그인 없이 보는 중'}
@@ -1789,9 +1787,9 @@ async function logout(expired){
 
 /* ---------- my info ---------- */
 function meMsg(t){$('#meMsg').textContent=t||''}
-function renderMe(){$('#meWho').textContent='아이디: '+B.login;$('#meName').value=B.name||'';
+function renderMe(){show('#meAcct',B.remote);show('#logoutBtn',B.remote);show('#bkInL',B.canAdd);show('#bkInHint',B.remote&&B.canAdd);bkMsg('');if(!B.remote)return;$('#meWho').textContent='아이디: '+B.login;$('#meName').value=B.name||'';
   $('#adminState').textContent=B.admin?'관리자 모드가 켜져 있어요. 모든 세트를 고치고 지울 수 있어요.':'';show('#adminOff',B.admin);show('#resetBox',B.admin)}
-$('#meBtn').onclick=()=>{if(B.remote&&!B.session){showAuth();return}show('#lib',false);show('#me',true);meMsg('');renderMe()};
+$('#meBtn').onclick=()=>{if(B.remote&&!B.session){showAuth();return}show('#lib',false);show('#me',true);meMsg('');renderMe();scrollTo(0,0)};
 $('#meIcon').onclick=()=>$('#meBtn').click();
 $('#meClose').onclick=goLib;
 $('#logoutBtn').onclick=()=>logout(false);
@@ -1851,7 +1849,7 @@ if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)&&!/\/tests\
     B.remote=true;B.canAdd=false;const t=pref.get('session','');if(t)cachedMe(t);accountUI();enterOffline();goLib();startLib();return;
   }
   if(!sb){
-    B.remote=false;B.admin=true;B.canAdd=true;B.me='local';show('#meBtn',false);show('#lib',true);
+    B.remote=false;B.admin=true;B.canAdd=true;B.me='local';show('#meBtn',false);show('#meIcon',true);show('#lib',true);
     note(CONFIG.url&&!/YOUR/.test(CONFIG.url)?'서버에 연결하지 못해 이 브라우저에만 저장돼요. 설정을 확인해 주세요.':'아직 서버 설정 전이라 이 브라우저에만 저장돼요. 설정 방법은 README를 참고하세요.');
     startLib();return;
   }

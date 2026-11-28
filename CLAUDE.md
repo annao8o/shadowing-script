@@ -142,4 +142,6 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
   keep their segment (hand fixes too), same-size stretches of similar lines (`similar`, letter-pair overlap ≥ 0.5) keep
   theirs one to one, and only other stretches are re-split inside their own time span (`splitRange` runs `segment` on
   that slice of the analysis). Notes-only edits keep `segs` untouched. A new recording still re-splits everything.
+- Backup lives in 내 정보 (`#me`, no separate page): export takes every set the person can see in all spaces
+  (`B.rawSets`, trash included, with `kind`); import skips scripts already in any space and adds the rest to the current space.
 - Backups use `app: 'latihan-naskah'` in the JSON — keep that id so older backups still import.
