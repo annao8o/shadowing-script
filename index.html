@@ -29,11 +29,10 @@ button{cursor:pointer}
 .hdrme{display:flex;align-items:center;gap:8px;min-width:0;margin-inline-start:auto}
 #hello{font-size:13.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:8em}
 .hdrme .meic{width:36px;height:36px}.hdrme .meic svg{width:22px;height:22px}
-.sprow{display:flex;margin-top:2px}
-.sprow .spbtn{max-width:100%;min-width:0;min-height:30px;padding:0 10px;font-size:13px;font-weight:600;background:none;border-color:transparent;color:var(--mute);margin-inline-start:-6px}
-.sprow .spbtn:hover,.sprow .spbtn:focus-visible{background:var(--chip);color:var(--ink)}
-.sprow .spbtn span{max-width:none;min-width:0}
-@media(max-width:600px){.top h1{font-size:18px}.top h1 a{gap:8px}}
+.toprow .spbtn{flex:0 1 auto;min-width:0;margin-inline-start:auto}
+.toprow .spbtn span{max-width:none;min-width:0}
+.tabrow{display:flex;align-items:center;gap:10px}
+@media(max-width:600px){.top h1{font-size:18px}.top h1 a{gap:8px}.toprow .spbtn>svg:first-child{display:none}.toprow .spbtn{padding:0 10px 0 12px}}
 .spbtn{min-height:44px;max-width:100%;display:inline-flex;align-items:center;gap:6px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.14);color:#fff;font-weight:700;font-size:15px;cursor:pointer}
 .spbtn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:14em}
 .spbtn:hover,.spbtn:focus-visible{background:rgba(255,255,255,.24)}
@@ -70,7 +69,7 @@ select{min-height:44px;border-radius:999px;border:1px solid var(--line);backgrou
 .opts label{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--mute)}
 .opts select{min-height:34px;font-size:14px;padding:0 10px}
 .tg{position:relative;min-height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:13.5px;font-weight:600}
-.tg::after,.sc::after{content:"";position:absolute;inset:-6px -2px}
+.tg::after,.sc::after{content:"";position:absolute;inset:-4px 0}
 .tg[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .sum{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:24px}
 .sum h2{margin:0;font-size:20px}
@@ -123,7 +122,7 @@ body.edit .ed{display:flex}
 .ask-pr{font-size:15px;line-height:1.45;margin-top:2px;color:light-dark(#8a2033,#ffb3bf);font-family:"Noto Sans KR",sans-serif;overflow-wrap:anywhere}
 .ask-ko{font-size:14px;color:var(--mute);margin-top:2px;font-family:"Noto Sans KR",sans-serif;overflow-wrap:anywhere}
 .askres .say{flex:none;width:44px;height:44px;border-radius:50%;border:0;background:var(--red);color:#fff;display:grid;place-items:center;padding:0;cursor:pointer}
-.askops{display:flex;gap:6px;margin-top:6px}
+.askops{display:flex;gap:10px;margin-top:6px}
 .askres .cp{flex:none;min-height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:transparent;font-size:12.5px;color:var(--mute)}
 .askres .adel{flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--mute);display:grid;place-items:center;padding:0}
 .askres .adel:hover,.askres .cp:hover{color:var(--ink);border-color:color-mix(in srgb,var(--ink) 30%,var(--line))}
@@ -250,7 +249,8 @@ body.pred .pre{display:block}
 .btn:hover:not(:disabled){border-color:color-mix(in srgb,var(--ink) 30%,var(--line))}
 .btn.main{background:var(--ink);border-color:var(--ink);color:var(--bg)}
 .btn{position:relative;min-height:36px;padding:0 14px;font-size:14px}
-.btn::after,.spbtn::after,.back::after,.askres .cp::after,.askres .adel::after{content:"";position:absolute;inset:-5px -2px}
+/* invisible tap margin; every element listed here is position:relative so it stays on the button itself */
+.btn::after,.spbtn::after,.back::after{content:"";position:absolute;inset:-4px 0}
 .askact .btn{min-height:42px;font-size:15px}
 .spbtn{position:relative;min-height:36px;font-size:13.5px}
 .back{position:relative;min-height:32px;font-size:14px}
@@ -285,9 +285,8 @@ body.pred .pre{display:block}
 </head>
 <body>
 <header class="top"><div class="wrap">
-  <div class="toprow"><h1><a href="./" id="homeLink"><span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="#141414" d="M10.4 2.5h3.2v5.4H19v3.2h-5.4v10.4h-3.2V11.1H5V7.9h5.4z"/></svg></span>The Black Cross</a></h1><div class="hdrme"><span id="hello"></span><button class="meic hidden" id="meIcon" aria-label="내 정보" title="내 정보"><svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm0 14a8 8 0 0 1-6.14-2.88 9.95 9.95 0 0 1 12.28 0A8 8 0 0 1 12 20z"/></svg></button><button class="btn hidden" id="meBtn">로그인</button></div></div>
-  <div class="sprow"><button class="spbtn hidden" id="spBtn" aria-label="공간 이동"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg><span id="spName">공간</span><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg></button></div>
-  <nav class="mtabs hidden" id="mtabs" aria-label="메뉴"><button type="button" id="tabLib" aria-current="page">대본</button><button type="button" id="tabTalk">회화</button></nav>
+  <div class="toprow"><h1><a href="./" id="homeLink"><span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="#141414" d="M10.4 2.5h3.2v5.4H19v3.2h-5.4v10.4h-3.2V11.1H5V7.9h5.4z"/></svg></span>The Black Cross</a></h1><button class="spbtn hidden" id="spBtn" aria-label="공간 이동"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg><span id="spName">공간</span><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg></button></div>
+  <div class="tabrow"><nav class="mtabs hidden" id="mtabs" aria-label="메뉴"><button type="button" id="tabLib" aria-current="page">대본</button><button type="button" id="tabTalk">회화</button></nav><div class="hdrme"><span id="hello"></span><button class="meic hidden" id="meIcon" aria-label="내 정보" title="내 정보"><svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm0 14a8 8 0 0 1-6.14-2.88 9.95 9.95 0 0 1 12.28 0A8 8 0 0 1 12 20z"/></svg></button><button class="btn hidden" id="meBtn">로그인</button></div></div>
 </div></header>
 <main class="wrap">
   <p class="note hidden" id="note"></p>
@@ -1024,7 +1023,9 @@ $('#askIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.i
 $('#askRes').addEventListener('click',async e=>{const d=e.target.closest('button[data-del]');if(d){const h=askHist();h.splice(+d.dataset.del,1);pref.set('askHist',JSON.stringify(h));renderAsk(false);if(!h.length)askOpen=false;$('#askMsg').textContent='기록을 지웠어요.';return}
   const b=e.target.closest('button[data-say],button[data-cp]');if(!b)return;const x=askHist()[+(b.dataset.say??b.dataset.cp)];if(!x)return;
   if(b.dataset.say!==undefined){sayText(x.t,x.lang);return}
-  try{await navigator.clipboard.writeText(x.t);b.textContent='복사됨';setTimeout(()=>{b.textContent='복사'},1500)}catch(err){$('#askMsg').textContent='복사하지 못했어요. 길게 눌러 직접 복사해 주세요.'}});
+  let ok=false;try{await navigator.clipboard.writeText(x.t);ok=true}catch(err){
+    try{const ta=document.createElement('textarea');ta.value=x.t;ta.setAttribute('readonly','');ta.style.cssText='position:fixed;top:0;left:0;opacity:0';document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,ta.value.length);ok=document.execCommand('copy');ta.remove()}catch(e2){}}
+  if(ok){b.textContent='복사됨';setTimeout(()=>{b.textContent='복사'},1500)}else $('#askMsg').textContent='복사하지 못했어요. 문장을 길게 눌러 직접 복사해 주세요.'});
 
 /* ---------- library view ---------- */
 function folderInfo(f){const own=myFolder(f),n=B.lib.filter(x=>x.folder===f.id).length;
