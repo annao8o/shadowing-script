@@ -98,8 +98,8 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
   throttle in the background; keep it that way or clips run into the next line.
 - At play time `playEnd(i)` trims a clip to its voice: if the saved end sits on sound right before the next line it
   is pulled back to the quietest point, and trailing silence is cut to 0.12s. A segment whose end was set by hand in
-  구간 수정 carries `m:1` and is played exactly. Editing never lets lines overlap: moving an end past the next line's
-  start pushes that start along (and a start moved before the previous end pulls that end back).
+  구간 수정 carries `m:1` and is played exactly. Boundaries are shared while editing: moving a line's end sets the next
+  line's start to the same time, and moving a line's start sets the previous line's end (marked `m:1`).
   `playRange` (구간 수정 previews) plays the saved values exactly.
 - Pause (`pausePlay`) keeps `S.paused` (line, rep count, audio position or the pending follow-along step); the play
   button resumes from there (`resume`). Tapping a line, prev/next or opening a set starts fresh.

@@ -1512,9 +1512,10 @@ list.addEventListener('click',ev=>{
     if(act==='e-')g.e=Math.max(g.s+0.2,g.e-st);
     if(act==='e+')g.e=Math.min(nx?nx.e-0.2:S.dur,g.e+st);
     g.s=+g.s.toFixed(3);g.e=+g.e.toFixed(3);if(act[0]==='e')g.m=1;
-    // the next line starts after this one ends, and the previous one ends before this one starts
-    if(nx&&nx.s<g.e)nx.s=+Math.min(g.e,nx.e-0.2).toFixed(3);
-    if(prev&&prev.e>g.s){prev.e=+Math.max(g.s,prev.s+0.2).toFixed(3);prev.m=1}
+    // boundaries are shared: moving this line's end moves the next line's start to right there, and moving this
+    // line's start moves the previous line's end, so one fix covers both lines
+    if(act[0]==='e'&&nx)nx.s=+Math.min(g.e,nx.e-0.2).toFixed(3);
+    if(act[0]==='s'&&prev){prev.e=+Math.max(g.s,prev.s+0.2).toFixed(3);prev.m=1}
     mark();
     act[0]==='s'?playRange(i,g.s,Math.min(g.e,g.s+1.6)):playRange(i,Math.max(g.s,g.e-1.6),g.e);
     saveSegs();return;
