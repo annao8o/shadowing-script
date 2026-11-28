@@ -24,7 +24,11 @@ button{cursor:pointer}
 .top{background:var(--red);color:#fff;padding:clamp(20px,4vw,40px) max(5vw,16px) 18px}
 .top h1{margin:0;font-size:clamp(28px,6vw,44px);line-height:1.05;font-weight:800;letter-spacing:-.01em;text-wrap:balance}
 .top h1 a{color:inherit;text-decoration:none}
-.toprow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.toprow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:nowrap}
+.toprow h1{flex:none}
+.toprow .spbtn{flex:0 1 auto;min-width:0;margin-inline-start:auto}
+.toprow .spbtn span{max-width:none;min-width:0}
+@media(max-width:600px){.toprow .spbtn>svg:first-child{display:none}.toprow .spbtn{padding:0 10px 0 12px}.top h1{font-size:18px}.top h1 a{gap:8px}}
 .spbtn{min-height:44px;max-width:100%;display:inline-flex;align-items:center;gap:6px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.14);color:#fff;font-weight:700;font-size:15px;cursor:pointer}
 .spbtn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:14em}
 .spbtn:hover,.spbtn:focus-visible{background:rgba(255,255,255,.24)}
@@ -100,7 +104,9 @@ body.edit .ed{display:flex}
 .askbox{margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--card)}
 .askbox textarea{width:100%;min-height:64px;padding:10px 12px;border-radius:12px;resize:vertical;font-family:"Noto Sans KR",sans-serif}
 .askbox .row{margin-top:8px}
-#askLang{width:auto;border-radius:12px}
+.askact{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;margin-top:10px}.askact.one{grid-template-columns:1fr}
+.askact .btn{min-height:50px;justify-content:center;font-size:16px;padding:0 12px}
+.btn.rec{background:var(--red);border-color:var(--red);color:#fff}
 .askres{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
 .askres li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:var(--chip)}
 .askres li.new{outline:2px solid var(--redink)}
@@ -262,7 +268,7 @@ body.pred .pre{display:block}
 </head>
 <body>
 <header class="top"><div class="wrap">
-  <div class="toprow"><h1><a href="./" id="homeLink"><span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 10h2v4H3zm4-3h2v10H7zm4-4h2v18h-2zm4 4h2v10h-2zm4 3h2v4h-2z"/></svg></span>The Black Cross</a></h1><button class="spbtn hidden" id="spBtn" aria-label="공간 이동"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg><span id="spName">공간</span><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg></button></div>
+  <div class="toprow"><h1><a href="./" id="homeLink"><span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="#141414" d="M10.4 2.5h3.2v5.4H19v3.2h-5.4v10.4h-3.2V11.1H5V7.9h5.4z"/></svg></span>The Black Cross</a></h1><button class="spbtn hidden" id="spBtn" aria-label="공간 이동"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg><span id="spName">공간</span><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg></button></div>
   <nav class="mtabs hidden" id="mtabs" aria-label="메뉴"><button type="button" id="tabLib" aria-current="page">대본</button><button type="button" id="tabTalk">회화</button></nav>
 </div></header>
 <main class="wrap">
@@ -290,7 +296,7 @@ body.pred .pre{display:block}
     <div class="askbox hidden" id="askBox" role="region" aria-label="한국어로 물어보기">
       <label class="f" for="askIn" style="margin-top:0">한국어로 적거나 말해 보세요</label>
       <textarea id="askIn" class="inp" maxlength="300" placeholder="예: 화장실이 어디예요?" autocomplete="off"></textarea>
-      <div class="row"><select id="askLang" class="inp" aria-label="바꿀 언어"></select><button class="btn main" id="askGo">바꾸기</button><button class="btn hidden" id="askMic" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg><span id="askMicT">말하기</span></button></div>
+      <div class="askact" id="askAct"><button class="btn hidden" id="askMic" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg><span id="askMicT">말하기</span></button><button class="btn main" id="askGo" type="button">인도네시아어로 바꾸기</button></div>
       <div id="askMsg" class="bkmsg" role="status"></div>
       <ul class="askres" id="askRes" aria-live="polite"></ul>
     </div>
@@ -943,8 +949,6 @@ window.addEventListener('online',()=>{if(!B.remote)return;if(!sb){location.reloa
 // Korean in -> the chosen language, with Hangul pronunciation (Indonesian/Malay rules) and device voice. Nothing is saved
 // on the server; the last 10 answers stay on this device (naskah.askHist).
 const DL={id:'ID',en:'EN-US',ja:'JA',zh:'ZH-HANS',es:'ES',fr:'FR',de:'DE',it:'IT',pt:'PT-BR',ru:'RU',tr:'TR',ar:'AR'};
-$('#askLang').innerHTML=LANGS.filter(l=>DL[l[0]]).map(l=>`<option value="${l[0]}">${l[1]}로</option>`).join('');
-$('#askLang').value=DL[pref.get('askLang','id')]?pref.get('askLang','id'):'id';
 const askHist=()=>{try{const a=JSON.parse(pref.get('askHist','[]'));return Array.isArray(a)?a.filter(x=>x&&typeof x.t==='string').slice(0,10):[]}catch(e){return[]}};
 const askPr=x=>x.lang==='id'||x.lang==='ms'?pronounce(x.t):'';
 function renderAsk(fresh){const h=askHist();
@@ -956,13 +960,13 @@ function sayText(text,lang){if(!SY){$('#askMsg').textContent='이 브라우저�
   ut.rate=+(($('#speed')||{}).value||1);SY.speak(ut)}
 const ASK_ERR={not_configured:'아직 번역 설정이 안 돼 있어요. 사이트 주인이 DeepL 키를 넣으면 쓸 수 있어요.',too_many:'오늘 쓸 수 있는 만큼 다 썼어요. 내일 다시 써 주세요.',too_many_guest:'오늘 쓸 수 있는 만큼 다 썼어요. 로그인하면 더 쓸 수 있어요.',busy:'오늘은 로그인하지 않은 사람이 쓸 수 있는 번역을 다 썼어요. 로그인하면 계속 쓸 수 있어요.',deepl_quota:'이번 달 DeepL 무료 번역 한도를 다 썼어요. 다음 달에 다시 쓸 수 있어요.',bad_key:'번역 키가 맞지 않아요. 사이트 주인에게 알려 주세요.',bad_text:'300자 이내로 적어 주세요.',bad_lang:'이 언어로는 바꿀 수 없어요.'};
 async function askGo(){
-  const ko=$('#askIn').value.trim(),lang=$('#askLang').value;if(!ko){$('#askMsg').textContent='한국어 문장을 적어 주세요.';$('#askIn').focus();return}
-  pref.set('askLang',lang);$('#askGo').disabled=true;$('#askMsg').textContent='바꾸는 중…';
+  const ko=$('#askIn').value.trim(),lang='id';if(!ko){$('#askMsg').textContent='한국어 문장을 적어 주세요.';$('#askIn').focus();return}
+  $('#askGo').disabled=true;$('#askMsg').textContent='바꾸는 중…';
   try{const {data,error}=await sb.rpc('translate_ko',{p_token:B.session||null,p_text:ko,p_target:DL[lang]});
     if(error||!data){$('#askMsg').textContent='번역하지 못했어요. 인터넷 연결을 확인하고 다시 해 주세요.';return}
     if(data.error){if(data.error==='auth'){logout(true);return}$('#askMsg').textContent=ASK_ERR[data.error==='too_many'&&!B.session?'too_many_guest':data.error]||'번역하지 못했어요. 잠시 뒤 다시 해 주세요.';return}
     const h=askHist().filter(x=>!(x.ko===ko&&x.lang===lang));h.unshift({ko,t:data.text,lang});pref.set('askHist',JSON.stringify(h.slice(0,10)));
-    $('#askMsg').textContent='';$('#askIn').value='';renderAsk(true);sayText(data.text,lang);
+    $('#askMsg').textContent='';$('#askIn').value='';renderAsk(true);
   }catch(e){$('#askMsg').textContent='번역하지 못했어요. 인터넷 연결을 확인하고 다시 해 주세요.'}
   finally{$('#askGo').disabled=false}
 }
@@ -974,10 +978,10 @@ $('#tabLib').onclick=()=>goTab('script');
 $('#askGo').onclick=askGo;
 // speak Korean instead of typing (browser speech recognition: Chrome/Android/Edge and Safari on iPhone)
 const SRec=()=>window.SpeechRecognition||window.webkitSpeechRecognition;
-show('#askMic',!!SRec());
+show('#askMic',!!SRec());$('#askAct').classList.toggle('one',!SRec());
 let rec=null;
 function micStop(){if(rec){try{rec.stop()}catch(e){}}}
-function micUI(on){const b=$('#askMic');b.setAttribute('aria-pressed',String(on));b.classList.toggle('main',on);$('#askMicT').textContent=on?'듣는 중… 멈추기':'말하기'}
+function micUI(on){const b=$('#askMic');b.setAttribute('aria-pressed',String(on));b.classList.toggle('rec',on);$('#askMicT').textContent=on?'듣는 중… 멈추기':'말하기'}
 $('#askMic').onclick=()=>{
   if(rec){micStop();return}const C=SRec();if(!C)return;
   stop();try{SY&&SY.cancel()}catch(e){}

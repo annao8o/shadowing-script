@@ -135,7 +135,8 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
   api-free.deepl.com). 300 chars per call; signed in: 200 calls / 3000 chars a day per account; signed out: 50 calls /
   1000 chars a day per hashed client IP (`naskah_client_key()` from the request headers) and 8000 chars a day for all
   guests together (`translate_uses`). A mic button fills the box with browser speech recognition (ko-KR) and translates.
-  The page adds Hangul pronunciation (`pronounce`, Indonesian/Malay only) and reads it aloud with speechSynthesis;
+  The 회화 box always translates to Indonesian (no language picker; the RPC still accepts other DeepL targets) and
+  adds Hangul pronunciation (`pronounce`); it reads aloud only when ▶ is pressed (speechSynthesis);
   the last 10 answers stay in `naskah.askHist`. The DB test stubs the `http` extension with a fake DeepL.
 - Editing a script never re-splits the whole recording: `reuseSegs` matches old/new lines by text (LCS); matched lines
   keep their segment (hand fixes too), same-size stretches of similar lines (`similar`, letter-pair overlap ≥ 0.5) keep

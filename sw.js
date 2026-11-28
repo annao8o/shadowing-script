@@ -1,6 +1,6 @@
 // Service worker: keeps the page itself (and the scripts/fonts it needs) so the site opens without internet.
 // Scripts and recordings are NOT cached here: the page saves only the sets/folders the user picks (IndexedDB).
-const SHELL = 'naskah-shell-v1';
+const SHELL = 'naskah-shell-v2';
 const CORE = ['./', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js'];
 
