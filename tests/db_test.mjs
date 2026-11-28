@@ -35,6 +35,23 @@ await db.exec(STUB);
 check(migrations.length === fs.readdirSync(migDir).length, 'every migration file is named <14-digit timestamp>_name.sql');
 for (let i = 0; i < 2; i++) for (const f of migrations) await db.exec(sqlOf(f));
 console.log(`${migrations.length} migration(s) ran twice`);
+// stand-in for Supabase's http extension: a fake DeepL that answers by the key it is sent
+await db.exec(`create domain extensions.http_method as text;
+create type extensions.http_header as (field varchar, value varchar);
+create type extensions.http_request as (method extensions.http_method, uri varchar, headers extensions.http_header[], content_type varchar, content varchar);
+create type extensions.http_response as (status integer, content_type varchar, headers extensions.http_header[], content varchar);
+create function extensions.http_header(f varchar, v varchar) returns extensions.http_header language sql as $$ select row(f, v)::extensions.http_header $$;
+create function extensions.http_set_curlopt(o varchar, v varchar) returns boolean language sql as $$ select true $$;
+create table extensions.http_log(uri text, auth text, body text);
+create function extensions.http(r extensions.http_request) returns extensions.http_response language plpgsql as $$
+declare auth text := (r.headers[1]).value;
+begin
+  insert into extensions.http_log values (r.uri, auth, r.content);
+  if auth like '%bad%' then return row(403, 'application/json', null, '{}')::extensions.http_response; end if;
+  if auth like '%quota%' then return row(456, 'application/json', null, '{}')::extensions.http_response; end if;
+  return row(200, 'application/json', null, jsonb_build_object('translations', jsonb_build_array(jsonb_build_object('text',
+    '[' || (r.content::jsonb->>'target_lang') || '] ' || (r.content::jsonb->'text'->>0))))::text)::extensions.http_response;
+end $$;`);
 
 const ADMIN = '여기에-관리자-키를-적으세요';
 console.log('admin locked until admin-settings.sql');
@@ -197,6 +214,29 @@ check((await one('select save_pins($1,$2,$3,$4)', [bu.token, ADMIN, 'top:' + S1,
 await one('select save_pins($1,$2,$3,$4)', [bu.token, ADMIN, 'top:' + S1, []]);
 check(JSON.stringify(await one('select list_pins()')) === '{}', 'unpinning everything removes the list');
 check(typeof (await q('select * from list_pins')) === 'string', 'pins table not readable directly');
+
+console.log('translate (DeepL)');
+const tr = (tok, text, lang) => one('select translate_ko($1,$2,$3)', [tok, text, lang ?? 'ID']);
+check((await tr(null, '안녕하세요')).error === 'auth', 'only signed-in people can translate');
+check((await tr(ja.token, '안녕하세요')).error === 'not_configured', 'off until the owner adds a DeepL key');
+await db.exec("reset role; update settings set deepl_key = 'test-key:fx' where id = 1; set role anon");
+const t1 = await tr(ja.token, ' 안녕하세요 ');
+check(t1.ok && t1.text === '[ID] 안녕하세요', 'translates Korean to Indonesian');
+await db.exec('reset role');
+const call = (await db.query('select uri, auth, body from extensions.http_log order by ctid desc limit 1')).rows[0];
+await db.exec('set role anon');
+check(call.uri === 'https://api-free.deepl.com/v2/translate' && call.auth === 'DeepL-Auth-Key test-key:fx' && JSON.parse(call.body).source_lang === 'KO', 'free keys go to api-free.deepl.com with the key header');
+check((await tr(ja.token, 'x', 'JA')).text === '[JA] x' && (await tr(ja.token, 'x', 'XX')).error === 'bad_lang', 'other DeepL languages work; unknown ones are refused');
+check((await tr(ja.token, '')).error === 'bad_text' && (await tr(ja.token, 'a'.repeat(301))).error === 'bad_text', 'empty or over 300 characters refused');
+check(!JSON.stringify(await one('select translate_ko($1,$2)', [ja.token, '키?'])).includes('test-key'), 'the key never comes back');
+check(typeof (await q('select deepl_key from settings')) === 'string' && typeof (await q('select * from translate_uses')) === 'string', 'key and usage log not readable directly');
+for (let i = 0; i < 10; i++) await tr(bu.token, '가'.repeat(300));
+check((await tr(bu.token, '나')).error === 'too_many' && (await tr(ja.token, '나')).ok, 'daily limit per person (3000 characters)');
+await db.exec("reset role; update settings set deepl_key = 'bad-key' where id = 1; set role anon");
+check((await tr(ja.token, '안녕')).error === 'bad_key', 'a wrong key is reported');
+await db.exec("reset role; update settings set deepl_key = 'quota-key:fx' where id = 1; set role anon");
+check((await tr(ja.token, '안녕')).error === 'deepl_quota', 'DeepL monthly limit is reported');
+await db.exec("reset role; update settings set deepl_key = null where id = 1; set role anon");
 
 console.log('looking around without logging in');
 const gIds = async (tok = null) => (await one('select list_sets($1)', [tok])).map((r) => r.title);

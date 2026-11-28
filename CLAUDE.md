@@ -22,6 +22,8 @@ The repo is connected to Supabase's GitHub integration ("Deploy to production" o
   - No `supabase/config.toml`: without it the integration only applies migrations and leaves project settings alone.
 - `admin-settings.sql` — sets the admin key hash and join code; the owner runs it by hand in SQL Editor and
   never commits real values. Until it runs, the init migration's random placeholder locks sign-up and admin.
+- `deepl-settings.sql` — puts the DeepL API key into `settings.deepl_key`; like `admin-settings.sql`, the owner runs it
+  by hand and never commits a real key.
 - `README.md` — setup guide for the (non-developer) site owner, in Korean.
 - `sw.js`, `manifest.webmanifest`, `icon-*.png`, `apple-touch-icon.png` — home-screen app + offline. The service worker
   only keeps the page shell, supabase-js and fonts (`naskah-shell-vN`; bump N when `CORE` changes). It never caches
@@ -119,4 +121,9 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
 - Admin pins: `list_pins` (anyone reads) / `save_pins` (admin key, signed in) keep per list the keys shown on top for
   everyone, in the admin's order. `arrange()` = pinned first, then `ordered()`. In 순서 바꾸기 the two groups
   (`data-g="p"`/`"o"`) move separately; only an admin sees the pin buttons and can move pinned rows.
+- 한국어로 물어보기: `translate_ko(p_token, p_text, p_target)` (not `translate`, which is a built-in Postgres function) calls
+  DeepL from Postgres through Supabase's `http` extension with `settings.deepl_key` (free keys ending `:fx` go to
+  api-free.deepl.com). Signed-in only, 300 chars per call, 200 calls / 3000 chars per person per day (`translate_uses`).
+  The page adds Hangul pronunciation (`pronounce`, Indonesian/Malay only) and reads it aloud with speechSynthesis;
+  the last 10 answers stay in `naskah.askHist`. The DB test stubs the `http` extension with a fake DeepL.
 - Backups use `app: 'latihan-naskah'` in the JSON — keep that id so older backups still import.
