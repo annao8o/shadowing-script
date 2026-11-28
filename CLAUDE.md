@@ -111,4 +111,9 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
   is saved, `enterOffline()` swaps `B.rawSets/rawFolders/spaces` for the saved copies and sets `B.offline` (read-only:
   `canModify` is false, `body.offline` hides network-only buttons). `getAudio` prefers the saved blob.
   The mock goes "offline" when localStorage `sbmock.down` is set.
+- List order is per person (no sort menu): `list_orders` (`get_orders`/`save_order`) holds, per account and list
+  (`top:<space id>` or `folder:<folder id>`), the keys `f:<id>`/`s:<id>` in order. The page mirrors it in localStorage
+  (`naskah.orders.u.<account>`; signed-out people only have `naskah.orders`). `ordered()` puts items missing from the
+  saved order (new ones) on top; with no saved order it is folders first, then latest edited. 순서 바꾸기 mode
+  (`B.reorder`) drags by the ≡ handle with pointer events or moves with ↑↓; `renderLib` skips while a drag is on.
 - Backups use `app: 'latihan-naskah'` in the JSON — keep that id so older backups still import.

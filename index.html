@@ -126,7 +126,15 @@ body.offline #inboxBtn,body.offline #bkBtn,body.offline #meBtn,body.offline #meI
 .meic:hover,.meic:focus-visible{border-color:var(--ink)}
 .spkbar{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
 .libtools{display:flex;align-items:flex-start;gap:8px;margin-top:14px}.libtools .spkbar{flex:1;min-width:0}
-#sortSel{width:auto;flex:none;margin:0 0 12px auto;padding-right:8px;border-radius:12px}
+#ordBtn{flex:none;margin:0 0 12px auto}
+.ordhint{font-size:14px;color:var(--mute);margin:-4px 0 0}
+.sets li.ro{display:flex;align-items:center;gap:6px;padding:6px 8px 6px 2px;border:1px solid var(--line);border-radius:14px;background:var(--card);min-height:56px}
+.ro .grip{flex:none;width:44px;height:44px;display:grid;place-items:center;color:var(--mute);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.ro .tt{flex:1;min-width:0}.ro .tt b{display:block;overflow-wrap:anywhere}.ro .tt small{color:var(--mute);font-size:13px}
+.ro .mv{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--chip);display:grid;place-items:center;padding:0;cursor:pointer}
+.ro .mv:disabled{opacity:.35;cursor:default}
+.sets li.ro.drag{z-index:5;box-shadow:0 8px 24px rgba(0,0,0,.28);border-color:var(--redink);cursor:grabbing}
+.sets.dragging{user-select:none;-webkit-user-select:none}
 .sc{min-height:40px;padding:0 14px;border-radius:999px;border:1.5px solid var(--c,var(--line));background:transparent;font-size:14px;font-weight:700;color:var(--c,var(--ink))}
 .sc[aria-pressed=true]{background:var(--c,var(--ink));color:var(--bg);border-color:var(--c,var(--ink))}
 .sc small{font-weight:500;opacity:.8;margin-inline-start:4px;font-size:13px}
@@ -221,7 +229,8 @@ body.pred .pre{display:block}
       <div class="offrow hidden" id="fOffRow" style="margin-top:10px"><button class="btn" id="fOffBtn">폴더째 오프라인 저장</button><span id="fOffState"></span></div>
     </div>
     <div class="libtools"><div class="spkbar hidden" id="langBar" role="group" aria-label="언어별 보기"></div>
-      <select id="sortSel" class="inp hidden" aria-label="정렬"><option value="recent">최근 수정순</option><option value="new">최근 추가순</option><option value="old">오래된 순</option><option value="title">제목순</option></select></div>
+      <button class="btn hidden" id="ordBtn" aria-pressed="false">순서 바꾸기</button></div>
+    <p class="ordhint hidden" id="ordHint">왼쪽 ≡를 눌러 끌거나 ↑↓로 옮겨요. 바꾼 순서는 바로 저장되고, 새로 생긴 스크립트는 맨 위에 와요.</p>
     <ul class="sets" id="sets"><li class="empty-l">불러오는 중…</li></ul>
   </section>
 
@@ -565,15 +574,29 @@ function idb(){return new Promise((res,rej)=>{try{const r=indexedDB.open('naskah
 async function lget(){try{const db=await idb();return await new Promise(res=>{const r=db.transaction('kv').objectStore('kv').get('lib');r.onsuccess=()=>res(r.result||[]);r.onerror=()=>res([])})}catch(e){return[]}}
 async function lput(arr){try{const db=await idb();db.transaction('kv','readwrite').objectStore('kv').put(arr,'lib')}catch(e){}}
 const sortLib=a=>a.sort((x,y)=>(y.updatedAt||0)-(x.updatedAt||0));
-// list order picked on this device: recent (edited) | new | old (added) | title
-const SORTS=['recent','new','old','title'];
-const sortKey=()=>{const k=pref.get('sort','recent');return SORTS.includes(k)?k:'recent'};
-const byTitle=(a,b)=>String(a||'').localeCompare(String(b||''),'ko',{numeric:true,sensitivity:'base'});
-function sortBy(arr,k,get){const v=x=>get(x);return arr.slice().sort((a,b)=>{const A=v(a),B2=v(b);
-  const r=k==='title'?byTitle(A.t,B2.t):k==='new'?(B2.c||0)-(A.c||0):k==='old'?(A.c||0)-(B2.c||0):(B2.u||0)-(A.u||0);
-  return r||byTitle(A.t,B2.t)})}
-const setKey=s=>({t:s.title,c:s.createdAt,u:s.updatedAt});
-const folderKey=f=>{const its=B.lib.filter(s=>s.folder===f.id);return{t:f.title,c:Date.parse(f.created_at)||0,u:Math.max(Date.parse(f.updated_at)||0,Date.parse(f.created_at)||0,...its.map(s=>s.updatedAt||0))}};
+// each person's own list order: B.orders['top:<space>'|'folder:<id>'] = ['f:<id>'|'s:<id>', ...]
+// signed in: kept on the account (get_orders/save_order) and mirrored on the device for offline; signed out: device only.
+// Items missing from a saved order (new ones) go on top; with no saved order: folders first, then latest edited.
+const ordKey=()=>B.remote&&B.session&&B.me?'orders.u.'+B.me:'orders';
+function orders(){const k=ordKey();if(B.ordK!==k){B.ordK=k;try{const o=JSON.parse(pref.get(k,'{}'));B.orders=o&&typeof o==='object'&&!Array.isArray(o)?o:{}}catch(e){B.orders={}}}return B.orders}
+const listScope=F=>F?'folder:'+F.id:'top:'+(B.space||'local');
+function ordered(scope,items){const o=orders()[scope];if(!Array.isArray(o)||!o.length)return items;const pos=new Map(o.map((k,i)=>[k,i]));
+  return items.filter(x=>!pos.has(x.k)).concat(items.filter(x=>pos.has(x.k)).sort((a,b)=>pos.get(a.k)-pos.get(b.k)))}
+const ordT={};
+function saveOrder(scope,keys){
+  orders()[scope]=keys;pref.set(ordKey(),JSON.stringify(B.orders));
+  if(!B.remote||!B.session||B.offline||!/^(top|folder):[0-9a-f-]{36}$/.test(scope))return;
+  clearTimeout(ordT[scope]);const tok=B.session;
+  ordT[scope]=setTimeout(async()=>{delete ordT[scope];try{const {data,error}=await sb.rpc('save_order',{p_token:tok,p_scope:scope,p_items:keys});
+    if(error||!data||data.error){if(data&&data.error==='auth'){logout(true);return}note('순서를 저장하지 못했어요. 이 기기에는 남아 있어요.')}}catch(e){}},600);
+}
+let ordFetched='';
+async function fetchOrders(){
+  if(!B.remote||!B.session||B.offline||ordFetched===B.me)return;const me=B.me;ordFetched=me;
+  try{const {data,error}=await sb.rpc('get_orders',{p_token:B.session});
+    if(error||!data||data.error||B.me!==me||Object.keys(ordT).length)return;
+    orders();B.orders=data;pref.set(ordKey(),JSON.stringify(data));if(!drag&&!$('#lib').classList.contains('hidden'))renderLib()}catch(e){ordFetched=''}
+}
 async function reloadLocal(){const a=await lget();setAll(a.map(x=>Object.assign({uid:'local'},x)));libCb&&libCb()}
 
 /* ---------- backend (Supabase) ---------- */
@@ -596,7 +619,7 @@ async function load(){
     if(B.offline)leaveOffline();
     B.rawSets=data||[];B.rawFolders=fr&&!fr.error&&Array.isArray(fr.data)?fr.data:[];B.spaces=sr&&!sr.error&&Array.isArray(sr.data)?sr.data:[];
     applySpace();if($('#note').textContent.startsWith('목록을'))note('');libCb&&libCb();
-    loadInbox();offSync();
+    loadInbox();offSync();fetchOrders();
   }catch(e){if(offHas()){if(!B.offline){enterOffline();libCb&&libCb()}}else note('목록을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.')}
   loading=false;
   if(B.session&&B.space&&!isMember(B.space))joinSpace(B.space);
@@ -780,6 +803,7 @@ function setRow(s){const its=parseScript(s.script,s.mode||'auto');const sp=new S
   const who=whoOf(s),cfg=canModify(s);
   return `<li${cfg?' class="cfg"':''}><button class="set" data-id="${esc(s.id)}"><span class="tt"><b>${esc(s.title||'제목 없음')}</b><small><span class="lt">${esc(langName(s.lang))}</span>${who.replace(/ · $/,'')}</small><small class="m2">${its.length}개 멘트${sp.size?' · 화자 '+sp.size+'명':''} · ${s.tts?'기계 음성':'녹음 '+fmt(s.dur)}${OFF.sets[s.id]?' · <span class="offb">오프라인</span>':''}</small></span><span class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">${PLAY}</svg></span></button>${cfg?`<button class="gear" data-cfg="${esc(s.id)}" aria-label="‘${esc(s.title||'제목 없음')}’ 세트 설정" title="세트 설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GEAR}</svg></button>`:''}</li>`}
 function renderLib(){
+  if(drag)return;
   const noSpace=B.remote&&!B.space;
   const canAddHere=B.remote?!B.offline&&!!B.session&&isMember(B.space):B.canAdd;
   show('#addBtn',canAddHere);
@@ -796,11 +820,11 @@ function renderLib(){
     const fo=!!OFF.folders[F.id];show('#fOffRow',B.remote&&(fo||!B.offline));$('#fOffBtn').textContent=fo?'오프라인 저장 해제':'폴더째 오프라인 저장';
     if(!$('#fOffBtn').disabled)$('#fOffState').textContent=fo?'이 기기에 저장됨'+(folderBytes(F.id)?' · '+mb(folderBytes(F.id)):''):''}
   const el=$('#sets');
-  if(noSpace){show('#langBar',false);show('#sortSel',false);
+  if(noSpace){show('#langBar',false);show('#ordBtn',false);show('#ordHint',false);
     el.innerHTML=`<li class="empty-l">아직 공간이 없어요. ${B.admin?'위쪽 공간 버튼에서 ‘+ 새 공간’으로 만들어 주세요.':'관리자가 공간을 만들면 여기에 나와요.'}</li>`;return}
   const pool=F?B.lib.filter(s=>s.folder===F.id):B.lib.filter(s=>!inFolder(s));
   const folders=F?[]:B.folders;
-  if(!pool.length&&!folders.length){show('#langBar',false);show('#sortSel',false);
+  if(!pool.length&&!folders.length){show('#langBar',false);show('#ordBtn',false);show('#ordHint',false);B.reorder=false;
     el.innerHTML=`<li class="empty-l">${F?(myFolder(F)?'아직 이 폴더에 스크립트가 없어요. ‘새 대본 추가’로 바로 넣거나, 스크립트의 톱니바퀴에서 폴더를 골라 옮겨 보세요.':'아직 이 폴더에 스크립트가 없어요.'):B.canAdd?'아직 대본이 없어요. ‘새 대본 추가’로 첫 세트를 만들어 보세요.':'아직 등록된 대본이 없어요. 추가 권한이 있는 사람이 올리면 여기에 나타나요.'}</li>`;return}
   const counted=F?pool:B.lib;
   const langs={};for(const s of counted){const k=s.lang||'id';langs[k]=(langs[k]||0)+1}
@@ -809,16 +833,46 @@ function renderLib(){
   $('#langBar').innerHTML=`<button class="sc" data-l="" aria-pressed="${!lf}">전체<small>${counted.length}</small></button>`+codes.map(c=>`<button class="sc" data-l="${esc(c)}" aria-pressed="${lf===c}">${esc(langName(c))}<small>${langs[c]}</small></button>`).join('');
   const shown=lf?pool.filter(s=>(s.lang||'id')===lf):pool;
   const fShown=lf?folders.filter(f=>B.lib.some(s=>s.folder===f.id&&(s.lang||'id')===lf)):folders;
-  const sk=sortKey();show('#sortSel',fShown.length+shown.length>1);$('#sortSel').value=sk;
-  el.innerHTML=sortBy(fShown,sk,folderKey).map(folderRow).join('')+sortBy(shown,sk,setKey).map(setRow).join('')||'<li class="empty-l">이 언어로 된 스크립트가 없어요.</li>';
+  const scope=listScope(F),item=x=>x.f?{k:'f:'+x.f.id,f:x.f}:{k:'s:'+x.s.id,s:x.s};
+  const canOrder=pool.length+folders.length>1&&!B.offline;if(!canOrder)B.reorder=false;
+  show('#ordBtn',canOrder);$('#ordBtn').textContent=B.reorder?'완료':'순서 바꾸기';$('#ordBtn').classList.toggle('main',!!B.reorder);$('#ordBtn').setAttribute('aria-pressed',String(!!B.reorder));
+  show('#ordHint',!!B.reorder);el.classList.toggle('ordering',!!B.reorder);
+  if(B.reorder){ // every item of this list, language filter aside
+    show('#langBar',false);
+    const all=ordered(scope,[...folders.map(f=>item({f})),...pool.map(s=>item({s}))]);
+    el.innerHTML=all.map((x,i)=>roRow(x,i,all.length)).join('');return}
+  const all=ordered(scope,[...fShown.map(f=>item({f})),...shown.map(s=>item({s}))]);
+  el.innerHTML=all.map(x=>x.f?folderRow(x.f):setRow(x.s)).join('')||'<li class="empty-l">이 언어로 된 스크립트가 없어요.</li>';
 }
-$('#sortSel').addEventListener('change',e=>{pref.set('sort',e.target.value);renderLib()});
+const GRIP='<path d="M4 7h16v2H4zm0 4h16v2H4zm0 4h16v2H4z"/>';
+function roRow(x,i,n){const t=x.f?x.f.title:(x.s.title||'제목 없음');
+  return `<li class="ro" data-k="${esc(x.k)}"><span class="grip" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GRIP}</svg></span><span class="tt"><b>${esc(t)}</b><small>${x.f?'폴더':'스크립트'}</small></span><button class="mv" data-mv="-1" aria-label="‘${esc(t)}’ 위로"${i===0?' disabled':''}>↑</button><button class="mv" data-mv="1" aria-label="‘${esc(t)}’ 아래로"${i===n-1?' disabled':''}>↓</button></li>`}
+const domKeys=()=>[...$('#sets').querySelectorAll('li.ro')].map(li=>li.dataset.k);
+$('#ordBtn').onclick=()=>{B.reorder=!B.reorder;renderLib()};
+function moveItem(k,d){const keys=domKeys(),i=keys.indexOf(k),j=i+d;if(i<0||j<0||j>=keys.length)return;[keys[i],keys[j]]=[keys[j],keys[i]];
+  saveOrder(listScope(fOf(B.folder)),keys);renderLib();const b=$('#sets').querySelector(`li[data-k="${k}"] button[data-mv="${d}"]`);if(b&&!b.disabled)b.focus()}
+// drag by the ≡ handle (mouse or finger); the list scrolls when you hold near the top or bottom edge
+let drag=null;
+$('#sets').addEventListener('pointerdown',e=>{const g=e.target.closest('.grip');if(!g||!B.reorder||drag)return;const li=g.closest('li.ro');if(!li)return;
+  e.preventDefault();try{g.setPointerCapture(e.pointerId)}catch(x){}
+  drag={li,g,id:e.pointerId,off:e.clientY-li.getBoundingClientRect().top,y:e.clientY,before:domKeys().join()};li.classList.add('drag');$('#sets').classList.add('dragging');
+  const loop=()=>{if(!drag)return;const y=drag.y,edge=70;if(y<edge)scrollBy(0,-Math.ceil((edge-y)/6));else if(y>innerHeight-edge)scrollBy(0,Math.ceil((y-innerHeight+edge)/6));dragTo(y);drag.raf=requestAnimationFrame(loop)};drag.raf=requestAnimationFrame(loop)});
+function dragTo(y){const li=drag.li;let n;
+  while((n=li.nextElementSibling)&&y>n.getBoundingClientRect().top+n.offsetHeight/2)n.after(li);
+  while((n=li.previousElementSibling)&&y<n.getBoundingClientRect().top+n.offsetHeight/2)n.before(li);
+  li.style.transform='';const nat=li.getBoundingClientRect().top;li.style.transform=`translateY(${y-drag.off-nat}px)`}
+$('#sets').addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;e.preventDefault();drag.y=e.clientY;dragTo(e.clientY)});
+function dragEnd(e){if(!drag||(e&&e.pointerId!==drag.id))return;cancelAnimationFrame(drag.raf);const {li,before}=drag;drag=null;
+  li.classList.remove('drag');li.style.transform='';$('#sets').classList.remove('dragging');
+  const keys=domKeys();if(keys.join()!==before)saveOrder(listScope(fOf(B.folder)),keys);renderLib()}
+$('#sets').addEventListener('pointerup',dragEnd);$('#sets').addEventListener('pointercancel',dragEnd);
 $('#langBar').addEventListener('click',e=>{const b=e.target.closest('.sc');if(!b)return;pref.set('langf',b.dataset.l||'');renderLib()});
-$('#sets').addEventListener('click',e=>{const ab=e.target.closest('button[data-act]');if(ab){if(ab.dataset.act==='login')showAuth();return}
+$('#sets').addEventListener('click',e=>{const mv=e.target.closest('button[data-mv]');if(mv){moveItem(mv.closest('li').dataset.k,+mv.dataset.mv);return}
+  if(B.reorder)return;const ab=e.target.closest('button[data-act]');if(ab){if(ab.dataset.act==='login')showAuth();return}
   const fg=e.target.closest('.gear[data-fcfg]');if(fg){openFolderForm(fOf(fg.dataset.fcfg));return}
   const g=e.target.closest('.gear[data-cfg]');if(g){const s=B.lib.find(x=>x.id===g.dataset.cfg);if(s)openEdit(s);return}
   const fb=e.target.closest('.set[data-fid]');if(fb){B.folder=fb.dataset.fid;renderLib();scrollTo(0,0);return}const b=e.target.closest('.set');if(!b)return;const s=B.lib.find(x=>x.id===b.dataset.id);if(s)openSet(s)});
-function goLib(){stop();S.set=null;S.cur=-1;show('#practice',false);show('#setup',false);show('#fldForm',false);show('#spaces',false);show('#bk',false);show('#trash',false);show('#me',false);show('#auth',false);show('#lib',true);show('#bar',false);
+function goLib(){stop();if($('#lib').classList.contains('hidden'))B.reorder=false;S.set=null;S.cur=-1;show('#practice',false);show('#setup',false);show('#fldForm',false);show('#spaces',false);show('#bk',false);show('#trash',false);show('#me',false);show('#auth',false);show('#lib',true);show('#bar',false);
   S.pk=null;$('#wave').style.height='';show('#wEmpty',true);$('#wEmpty').textContent='세트를 열면 여기에 파형과 멘트 구간이 표시됩니다';cv.classList.add('hidden');renderLib()}
 
 /* ---------- open a set ---------- */

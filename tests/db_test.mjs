@@ -174,6 +174,19 @@ check(!(await fnames(ja.token)).includes('여행 회화'), 'folder deleted');
 check((await ids(bu.token)).includes('in folder') && (await ids(ja.token)).includes('private set in public folder'), 'deleting a folder keeps its sets and who can see them');
 check((await one('select list_sets($1)', [ja.token])).every((r) => r.folder_id === null), 'sets moved out of the deleted folder');
 
+console.log('list order (per person)');
+const fk = 'f:' + '11111111-1111-4111-8111-111111111111', sk1 = 's:' + '22222222-2222-4222-8222-222222222222';
+check((await one('select get_orders($1)', [null])).error === 'auth' && (await one('select save_order($1,$2,$3)', [null, 'top:' + S1, [fk]])).error === 'auth', 'guests keep their order on the device only');
+check((await one('select save_order($1,$2,$3)', [ja.token, 'top:' + S1, [sk1, fk]])).ok, 'saving an order');
+check(JSON.stringify((await one('select get_orders($1)', [ja.token]))['top:' + S1]) === JSON.stringify([sk1, fk]), 'reading it back in order');
+check(JSON.stringify(await one('select get_orders($1)', [bu.token])) === '{}', "nobody sees someone else's order");
+await one('select save_order($1,$2,$3)', [ja.token, 'top:' + S1, [fk, sk1]]);
+check(JSON.stringify((await one('select get_orders($1)', [ja.token]))['top:' + S1]) === JSON.stringify([fk, sk1]), 'saving again replaces it');
+check((await one('select save_order($1,$2,$3)', [ja.token, 'nope', [fk]])).error === 'bad_scope' && (await one('select save_order($1,$2,$3)', [ja.token, 'top:' + S1, ['x:1']])).error === 'bad_items', 'bad lists and items are rejected');
+await one('select save_order($1,$2,$3)', [ja.token, 'top:' + S1, []]);
+check(!('top:' + S1 in (await one('select get_orders($1)', [ja.token]))), 'an empty order is removed');
+check(typeof (await q('select * from list_orders')) === 'string', 'orders table not readable directly');
+
 console.log('looking around without logging in');
 const gIds = async (tok = null) => (await one('select list_sets($1)', [tok])).map((r) => r.title);
 const gFolders = async () => (await one('select list_folders($1)', [null])).map((f) => f.title);
