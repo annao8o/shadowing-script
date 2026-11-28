@@ -117,6 +117,8 @@ body.edit .ed{display:flex}
 .askres{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
 #askMsg{margin-top:8px}
 #askMsg:empty,#askRes:empty{display:none}
+#askBox{margin-bottom:22px}
+#lib .sets{margin-top:12px}
 .askres li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:var(--chip)}
 .askres li.new{outline:2px solid var(--redink)}
 .askres .tt{flex:1;min-width:0}
@@ -329,7 +331,7 @@ body.pred .pre{display:block}
       <div class="row hidden" id="fLeaveRow" style="margin-top:10px"><button class="btn" id="fLeave">내 목록에서 빼기</button></div>
       <div class="offrow hidden" id="fOffRow" style="margin-top:10px"><button class="btn" id="fOffBtn">폴더째 오프라인 저장</button><span id="fOffState"></span></div>
     </div>
-    <div class="libtools"><div class="spkbar hidden" id="langBar" role="group" aria-label="언어별 보기"></div></div>
+    <div class="libtools" id="libTools"><div class="spkbar hidden" id="langBar" role="group" aria-label="언어별 보기"></div></div>
     <ul class="sets" id="sets"><li class="empty-l">불러오는 중…</li></ul>
     <p class="hint hidden" id="ordTip"></p>
   </section>
@@ -1067,16 +1069,16 @@ function renderLib(){
     const fo=!!OFF.folders[F.id];show('#fOffRow',B.remote&&(fo||!B.offline));$('#fOffBtn').textContent=fo?'오프라인 저장 해제':'폴더째 오프라인 저장';
     if(!$('#fOffBtn').disabled)$('#fOffState').textContent=fo?'이 기기에 저장됨'+(folderBytes(F.id)?' · '+mb(folderBytes(F.id)):''):''}
   const el=$('#sets');
-  if(noSpace){show('#langBar',false);show('#ordTip',false);
+  if(noSpace){show('#langBar',false);show('#libTools',false);show('#ordTip',false);
     el.innerHTML=`<li class="empty-l">아직 공간이 없어요. ${B.admin?'위쪽 공간 버튼에서 ‘+ 새 공간’으로 만들어 주세요.':'관리자가 공간을 만들면 여기에 나와요.'}</li>`;return}
   const pool=F?B.lib.filter(s=>s.folder===F.id):B.lib.filter(s=>!inFolder(s)&&kindOf(s)===B.kind);
   const folders=F?[]:B.folders.filter(f=>(f.kind==='talk'?'talk':'script')===B.kind);
-  if(!pool.length&&!folders.length){show('#langBar',false);show('#ordTip',false);
+  if(!pool.length&&!folders.length){show('#langBar',false);show('#libTools',false);show('#ordTip',false);
     el.innerHTML=`<li class="empty-l">${F?(myFolder(F)?'아직 이 폴더에 스크립트가 없어요. ‘새 대본 추가’로 바로 넣거나, 스크립트의 톱니바퀴에서 폴더를 골라 옮겨 보세요.':'아직 이 폴더에 스크립트가 없어요.'):talk?(B.canAdd?'아직 회화 스크립트가 없어요. ‘+ 새 회화 추가’로 만들거나, 대본 탭에서 스크립트·폴더의 톱니바퀴를 눌러 분류를 ‘회화’로 바꾸면 이쪽으로 옮겨져요.':'아직 회화 스크립트가 없어요. 위의 칸에서 한국어로 물어볼 수 있어요.'):B.canAdd?'아직 대본이 없어요. ‘새 대본 추가’로 첫 세트를 만들어 보세요.':'아직 등록된 대본이 없어요. 추가 권한이 있는 사람이 올리면 여기에 나타나요.'}</li>`;return}
   const counted=F?pool:B.lib.filter(s=>kindOf(s)===B.kind);
   const langs={};for(const s of counted){const k=s.lang||'id';langs[k]=(langs[k]||0)+1}
   const codes=Object.keys(langs);let lf=pref.get('langf','');if(lf&&!langs[lf])lf='';
-  show('#langBar',codes.length>1);
+  show('#langBar',codes.length>1);show('#libTools',codes.length>1);
   $('#langBar').innerHTML=`<button class="sc" data-l="" aria-pressed="${!lf}">전체<small>${counted.length}</small></button>`+codes.map(c=>`<button class="sc" data-l="${esc(c)}" aria-pressed="${lf===c}">${esc(langName(c))}<small>${langs[c]}</small></button>`).join('');
   const shown=lf?pool.filter(s=>(s.lang||'id')===lf):pool;
   const fShown=lf?folders.filter(f=>B.lib.some(s=>s.folder===f.id&&(s.lang||'id')===lf)):folders;
