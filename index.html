@@ -140,20 +140,21 @@ body.offline #inboxBtn,body.offline #bkBtn,body.offline #meBtn,body.offline #meI
 .meic:hover,.meic:focus-visible{border-color:var(--ink)}
 .spkbar{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
 .libtools{display:flex;align-items:flex-start;gap:8px;margin-top:14px}.libtools .spkbar{flex:1;min-width:0}
-#ordBtn{flex:none;margin:0 0 12px auto}
-.ordhint{font-size:14px;color:var(--mute);margin:-4px 0 0}
-.sets li.ro{display:flex;align-items:center;gap:6px;padding:6px 8px 6px 2px;border:1px solid var(--line);border-radius:14px;background:var(--card);min-height:56px}
-.ro .grip{flex:none;width:44px;height:44px;display:grid;place-items:center;color:var(--mute);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
-.ro .tt{flex:1;min-width:0}.ro .tt b{display:block;overflow-wrap:anywhere}.ro .tt small{color:var(--mute);font-size:13px}
-.ro .mv{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--chip);display:grid;place-items:center;padding:0;cursor:pointer}
-.ro .mv:disabled{opacity:.35;cursor:default}
-.sets li.ro.drag{z-index:5;box-shadow:0 8px 24px rgba(0,0,0,.28);border-color:var(--redink);cursor:grabbing}
+.sets li[data-k]>.set{padding-inline-start:40px}
+.nw{white-space:nowrap}
+.sets .grip{position:absolute;inset-inline-start:2px;top:50%;transform:translateY(-50%);width:36px;height:48px;border:0;border-radius:10px;background:none;color:var(--mute);display:grid;place-items:center;padding:0;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;z-index:1}
+.sets .grip:hover{color:var(--ink);background:var(--chip)}
+.sets .grip.hold{color:var(--red)}
+.sets .pinbtn{position:absolute;top:50%;transform:translateY(-50%);inset-inline-end:58px;width:40px;height:44px;border-radius:50%;border:0;background:transparent;color:var(--mute);display:grid;place-items:center;padding:0;cursor:pointer}
+.sets li.cfg .pinbtn{inset-inline-end:106px}
+.sets .pinbtn:hover,.sets .pinbtn:focus-visible{color:var(--ink);background:var(--line)}
+.sets .pinbtn[aria-pressed=true]{color:var(--red)}
+.sets li.pn .set>.tt{padding-inline-end:40px}
+.sets li.cfg.pn .set>.tt{padding-inline-end:88px}
+@media(max-width:600px){.set{gap:10px}.set .fic{width:34px;height:34px}.sets li.cfg .gear{inset-inline-end:56px;width:40px}.sets li.cfg .pinbtn{inset-inline-end:96px}.sets li.cfg.pn .set>.tt{padding-inline-end:78px}}
+.sets li.drag{z-index:5}
+.sets li.drag>.set{box-shadow:0 10px 28px rgba(0,0,0,.25);border-color:color-mix(in srgb,var(--red) 55%,var(--line))}
 .sets.dragging{user-select:none;-webkit-user-select:none}
-.sets li.rohd{font-size:13px;font-weight:700;color:var(--mute);padding:6px 4px 0;display:flex;align-items:center;gap:6px}
-.ro .pin{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--chip);display:grid;place-items:center;padding:0;cursor:pointer;color:var(--mute)}
-.ro .pin[aria-pressed=true]{background:var(--red);border-color:var(--red);color:#fff}
-.ro .lock{flex:none;font-size:12.5px;color:var(--mute);padding:0 6px;display:inline-flex;align-items:center;gap:4px}
-.sets li.ro.pinned{border-color:color-mix(in srgb,var(--redink) 45%,var(--line))}
 .pinb{display:inline-block;width:15px;height:15px;vertical-align:-2px;margin-inline-end:4px;color:var(--redink)}
 .sc{min-height:40px;padding:0 14px;border-radius:999px;border:1.5px solid var(--c,var(--line));background:transparent;font-size:14px;font-weight:700;color:var(--c,var(--ink))}
 .sc[aria-pressed=true]{background:var(--c,var(--ink));color:var(--bg);border-color:var(--c,var(--ink))}
@@ -302,9 +303,7 @@ body.pred .pre{display:block}
       <div class="row hidden" id="fLeaveRow" style="margin-top:10px"><button class="btn" id="fLeave">내 목록에서 빼기</button></div>
       <div class="offrow hidden" id="fOffRow" style="margin-top:10px"><button class="btn" id="fOffBtn">폴더째 오프라인 저장</button><span id="fOffState"></span></div>
     </div>
-    <div class="libtools"><div class="spkbar hidden" id="langBar" role="group" aria-label="언어별 보기"></div>
-      <button class="btn hidden" id="ordBtn" aria-pressed="false">순서 바꾸기</button></div>
-    <p class="ordhint hidden" id="ordHint">왼쪽 ≡를 눌러 끌거나 ↑↓로 옮겨요. 바꾼 순서는 바로 저장되고, 새로 생긴 스크립트는 맨 위에 와요.</p>
+    <div class="libtools"><div class="spkbar hidden" id="langBar" role="group" aria-label="언어별 보기"></div></div>
     <ul class="sets" id="sets"><li class="empty-l">불러오는 중…</li></ul>
   </section>
 
@@ -969,7 +968,7 @@ async function askGo(){
 }
 // 대본 / 회화 tabs. Opening any other view (show(view,true)) closes 회화.
 function setMainTab(t){const a=$('#tabLib'),b=$('#tabTalk');if(!a)return;const on=t==='talk'?b:a,off=t==='talk'?a:b;on.setAttribute('aria-current','page');off.removeAttribute('aria-current')}
-function goTab(k){if(k!=='talk')micStop();B.kind=k;B.folder=null;B.reorder=false;EDIT=null;FED=null;goLib();scrollTo(0,0)}
+function goTab(k){if(k!=='talk')micStop();B.kind=k;B.folder=null;EDIT=null;FED=null;goLib();scrollTo(0,0)}
 $('#tabTalk').onclick=()=>goTab('talk');
 $('#tabLib').onclick=()=>goTab('script');
 $('#askGo').onclick=askGo;
@@ -997,12 +996,19 @@ $('#askRes').addEventListener('click',async e=>{const b=e.target.closest('button
 /* ---------- library view ---------- */
 function folderInfo(f){const own=myFolder(f),n=B.lib.filter(x=>x.folder===f.id).length;
   return (own?'내 폴더 · '+visTxt(f.visibility,f.share_count):[f.shared_with_me?'공유받음':'',f.owner_name||''].filter(Boolean).join(' · '))+' · 스크립트 '+n+'개'}
-function folderRow(f,pin){const own=myFolder(f),n=B.lib.filter(x=>x.folder===f.id).length;
-  const info=own?'<span class="mine">내 폴더</span> · '+esc(visTxt(f.visibility,f.share_count)):[f.shared_with_me?'공유받음':'',esc(f.owner_name||'')].filter(Boolean).join(' · ');
-  return `<li${own?' class="cfg"':''}><button class="set" data-fid="${esc(f.id)}"><span class="fic"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${FOLDER}</svg></span><span class="tt"><b>${pin?PINB:''}${esc(f.title)}</b><small>${info}${info?' · ':''}스크립트 ${n}개${OFF.folders[f.id]?' · <span class="offb">오프라인</span>':''}</small></span><span class="go gr"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">${CHEV}</svg></span></button>${own?`<button class="gear" data-fcfg="${esc(f.id)}" aria-label="‘${esc(f.title)}’ 폴더 설정" title="폴더 설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GEAR}</svg></button>`:''}</li>`}
+// row extras: ≡ to drag (long-press, or arrow keys), 📌 for the admin, group p = pinned / o = own order
+function rowBits(k,title,pin,cfg){const g=pin?'p':'o',mov=g==='o'||canPin(),pn=canPin();
+  return{attrs:` class="${[cfg?'cfg':'',pn?'pn':''].filter(Boolean).join(' ')}" data-k="${esc(k)}" data-g="${g}"`,
+    grip:mov?`<button class="grip" type="button" aria-label="‘${esc(title)}’ 순서 옮기기: 길게 눌러 끌거나 위·아래 화살표 키" title="길게 눌러 끌어서 순서 바꾸기"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">${GRIP}</svg></button>`:'',
+    pin:pn?`<button class="pinbtn" type="button" data-pin aria-pressed="${!!pin}" aria-label="‘${esc(title)}’ 모두에게 상단 고정" title="모두에게 상단 고정"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">${PIN}</svg></button>`:'',
+    badge:pin&&!pn?PINB:''}}
+function folderRow(f,pin){const own=myFolder(f),n=B.lib.filter(x=>x.folder===f.id).length,R=rowBits('f:'+f.id,f.title,pin,own);
+  const who=own?'<span class="mine">내 폴더</span>':[f.shared_with_me?'공유받음':'',esc(f.owner_name||'')].filter(Boolean).join(' · ');
+  const meta=[own?esc(visTxt(f.visibility,f.share_count)):'','스크립트 '+n+'개'].filter(Boolean).map(x=>`<span class="nw">${x}</span>`).join(' · ')+(OFF.folders[f.id]?' · <span class="offb nw">오프라인</span>':'');
+  return `<li${R.attrs}>${R.grip}<button class="set" data-fid="${esc(f.id)}"><span class="fic"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${FOLDER}</svg></span><span class="tt"><b>${R.badge}${esc(f.title)}</b>${who?`<small>${who}</small>`:''}<small class="m2">${meta}</small></span><span class="go gr"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">${CHEV}</svg></span></button>${own?`<button class="gear" data-fcfg="${esc(f.id)}" aria-label="‘${esc(f.title)}’ 폴더 설정" title="폴더 설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GEAR}</svg></button>`:''}${R.pin}</li>`}
 function setRow(s,pin){const its=parseScript(s.script,s.mode||'auto');const sp=new Set((s.spk&&s.spk.length===its.length?s.spk:its.map(i=>i.sp)).flatMap(spkList));
-  const who=whoOf(s),cfg=canModify(s);
-  return `<li${cfg?' class="cfg"':''}><button class="set" data-id="${esc(s.id)}"><span class="tt"><b>${pin?PINB:''}${esc(s.title||'제목 없음')}</b><small><span class="lt">${esc(langName(s.lang))}</span>${who.replace(/ · $/,'')}</small><small class="m2">${its.length}개 멘트${sp.size?' · 화자 '+sp.size+'명':''} · ${s.tts?'기계 음성':'녹음 '+fmt(s.dur)}${OFF.sets[s.id]?' · <span class="offb">오프라인</span>':''}</small></span><span class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">${PLAY}</svg></span></button>${cfg?`<button class="gear" data-cfg="${esc(s.id)}" aria-label="‘${esc(s.title||'제목 없음')}’ 세트 설정" title="세트 설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GEAR}</svg></button>`:''}</li>`}
+  const who=whoOf(s),cfg=canModify(s),R=rowBits('s:'+s.id,s.title||'제목 없음',pin,cfg);
+  return `<li${R.attrs}>${R.grip}<button class="set" data-id="${esc(s.id)}"><span class="tt"><b>${R.badge}${esc(s.title||'제목 없음')}</b><small><span class="lt">${esc(langName(s.lang))}</span>${who.replace(/ · $/,'')}</small><small class="m2"><span class="nw">${its.length}개 멘트</span>${sp.size?' · <span class="nw">화자 '+sp.size+'명</span>':''} · <span class="nw">${s.tts?'기계 음성':'녹음 '+fmt(s.dur)}</span>${OFF.sets[s.id]?' · <span class="offb nw">오프라인</span>':''}</small></span><span class="go"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">${PLAY}</svg></span></button>${cfg?`<button class="gear" data-cfg="${esc(s.id)}" aria-label="‘${esc(s.title||'제목 없음')}’ 세트 설정" title="세트 설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GEAR}</svg></button>`:''}${R.pin}</li>`}
 function renderLib(){
   if(drag)return;
   const noSpace=B.remote&&!B.space;
@@ -1026,11 +1032,11 @@ function renderLib(){
     const fo=!!OFF.folders[F.id];show('#fOffRow',B.remote&&(fo||!B.offline));$('#fOffBtn').textContent=fo?'오프라인 저장 해제':'폴더째 오프라인 저장';
     if(!$('#fOffBtn').disabled)$('#fOffState').textContent=fo?'이 기기에 저장됨'+(folderBytes(F.id)?' · '+mb(folderBytes(F.id)):''):''}
   const el=$('#sets');
-  if(noSpace){show('#langBar',false);show('#ordBtn',false);show('#ordHint',false);
+  if(noSpace){show('#langBar',false);
     el.innerHTML=`<li class="empty-l">아직 공간이 없어요. ${B.admin?'위쪽 공간 버튼에서 ‘+ 새 공간’으로 만들어 주세요.':'관리자가 공간을 만들면 여기에 나와요.'}</li>`;return}
   const pool=F?B.lib.filter(s=>s.folder===F.id):B.lib.filter(s=>!inFolder(s)&&kindOf(s)===B.kind);
   const folders=F?[]:B.folders.filter(f=>(f.kind==='talk'?'talk':'script')===B.kind);
-  if(!pool.length&&!folders.length){show('#langBar',false);show('#ordBtn',false);show('#ordHint',false);B.reorder=false;
+  if(!pool.length&&!folders.length){show('#langBar',false);
     el.innerHTML=`<li class="empty-l">${F?(myFolder(F)?'아직 이 폴더에 스크립트가 없어요. ‘새 대본 추가’로 바로 넣거나, 스크립트의 톱니바퀴에서 폴더를 골라 옮겨 보세요.':'아직 이 폴더에 스크립트가 없어요.'):talk?(B.canAdd?'아직 회화 스크립트가 없어요. ‘+ 새 회화 추가’로 만들거나, 대본 탭에서 스크립트·폴더의 톱니바퀴를 눌러 분류를 ‘회화’로 바꾸면 이쪽으로 옮겨져요.':'아직 회화 스크립트가 없어요. 위의 칸에서 한국어로 물어볼 수 있어요.'):B.canAdd?'아직 대본이 없어요. ‘새 대본 추가’로 첫 세트를 만들어 보세요.':'아직 등록된 대본이 없어요. 추가 권한이 있는 사람이 올리면 여기에 나타나요.'}</li>`;return}
   const counted=F?pool:B.lib.filter(s=>kindOf(s)===B.kind);
   const langs={};for(const s of counted){const k=s.lang||'id';langs[k]=(langs[k]||0)+1}
@@ -1040,53 +1046,55 @@ function renderLib(){
   const shown=lf?pool.filter(s=>(s.lang||'id')===lf):pool;
   const fShown=lf?folders.filter(f=>B.lib.some(s=>s.folder===f.id&&(s.lang||'id')===lf)):folders;
   const scope=listScope(F),item=x=>x.f?{k:'f:'+x.f.id,f:x.f}:{k:'s:'+x.s.id,s:x.s};
-  const canOrder=pool.length+folders.length>1&&!B.offline;if(!canOrder)B.reorder=false;
-  show('#ordBtn',canOrder);$('#ordBtn').textContent=B.reorder?'완료':'순서 바꾸기';$('#ordBtn').classList.toggle('main',!!B.reorder);$('#ordBtn').setAttribute('aria-pressed',String(!!B.reorder));
-  show('#ordHint',!!B.reorder);$('#ordHint').textContent='왼쪽 ≡를 눌러 끌거나 ↑↓로 옮겨요. 바꾼 순서는 바로 저장되고, 새로 생긴 스크립트는 맨 위에 와요.'+(B.reorder&&canPin()?' 오른쪽 핀을 누르면 모든 사람 목록 맨 위에 고정돼요.':'');el.classList.toggle('ordering',!!B.reorder);
-  if(B.reorder){ // every item of this list, language filter aside
-    show('#langBar',false);
-    const all=arrange(scope,[...folders.map(f=>item({f})),...pool.map(s=>item({s}))]),P=all.filter(x=>x.pin),O=all.filter(x=>!x.pin);
-    el.innerHTML=(P.length?`<li class="rohd">${PINB}모두에게 상단 고정${B.admin?' · 관리자만 바꿀 수 있어요':''}</li>`+P.map((x,i)=>roRow(x,i,P.length)).join('')+'<li class="rohd">내 순서</li>':'')+O.map((x,i)=>roRow(x,i,O.length)).join('');return}
+  B.fullO=arrange(scope,[...folders.map(f=>item({f})),...pool.map(s=>item({s}))]).filter(x=>!x.pin).map(x=>x.k);
   const all=arrange(scope,[...fShown.map(f=>item({f})),...shown.map(s=>item({s}))]);
   el.innerHTML=all.map(x=>x.f?folderRow(x.f,x.pin):setRow(x.s,x.pin)).join('')||'<li class="empty-l">이 언어로 된 스크립트가 없어요.</li>';
 }
 const GRIP='<path d="M4 7h16v2H4zm0 4h16v2H4zm0 4h16v2H4z"/>';
 const canPin=()=>B.remote&&!!B.session&&B.admin&&!B.offline;
-function roRow(x,i,n){const t=x.f?x.f.title:(x.s.title||'제목 없음'),g=x.pin?'p':'o',mov=g==='o'||canPin();
-  const pinBtn=canPin()?`<button class="pin" data-pin aria-pressed="${!!x.pin}" aria-label="‘${esc(t)}’ 모두에게 상단 고정" title="모두에게 상단 고정"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">${PIN}</svg></button>`:'';
-  return `<li class="ro${x.pin?' pinned':''}" data-k="${esc(x.k)}" data-g="${g}">${mov?`<span class="grip" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">${GRIP}</svg></span>`:'<span style="width:10px;flex:none"></span>'}<span class="tt"><b>${esc(t)}</b><small>${x.f?'폴더':'스크립트'}</small></span>`+
-    (mov?`<button class="mv" data-mv="-1" aria-label="‘${esc(t)}’ 위로"${i===0?' disabled':''}>↑</button><button class="mv" data-mv="1" aria-label="‘${esc(t)}’ 아래로"${i===n-1?' disabled':''}>↓</button>`:`<span class="lock">${PINB}관리자 고정</span>`)+pinBtn+'</li>'}
-const domKeys=(g='o')=>[...$('#sets').querySelectorAll(`li.ro[data-g="${g}"]`)].map(li=>li.dataset.k);
-function saveGroup(g,keys){const scope=listScope(fOf(B.folder));if(g==='p')savePins(scope,keys);else saveOrder(scope,keys)}
+const domKeys=g=>[...$('#sets').querySelectorAll(`li[data-k][data-g="${g}"]`)].map(li=>li.dataset.k);
+// the list may be filtered by language: put the shown items' new order back into the full order
+const mergeOrder=(full,shown)=>{const on=new Set(shown);let i=0;const out=full.map(k=>on.has(k)?shown[i++]:k);return out.concat(shown.slice(i).filter(k=>!full.includes(k)))};
+function saveGroup(g,keys){const scope=listScope(fOf(B.folder));if(g==='p')savePins(scope,mergeOrder(pinsOf(scope),keys));else saveOrder(scope,mergeOrder(B.fullO||keys,keys))}
 function togglePin(k){const scope=listScope(fOf(B.folder)),pk=pinsOf(scope).slice(),i=pk.indexOf(k);if(i>=0)pk.splice(i,1);else pk.push(k);
-  savePins(scope,pk);renderLib();const b=$('#sets').querySelector(`li[data-k="${k}"] button[data-pin]`);if(b)b.focus()}
-$('#ordBtn').onclick=()=>{B.reorder=!B.reorder;renderLib()};
-function moveItem(k,d){const li=$('#sets').querySelector(`li.ro[data-k="${k}"]`);if(!li)return;const g=li.dataset.g,keys=domKeys(g),i=keys.indexOf(k),j=i+d;if(i<0||j<0||j>=keys.length)return;[keys[i],keys[j]]=[keys[j],keys[i]];
-  saveGroup(g,keys);renderLib();const b=$('#sets').querySelector(`li[data-k="${k}"] button[data-mv="${d}"]`);if(b&&!b.disabled)b.focus()}
-// drag by the ≡ handle (mouse or finger); the list scrolls when you hold near the top or bottom edge
-let drag=null;
-$('#sets').addEventListener('pointerdown',e=>{const g=e.target.closest('.grip');if(!g||!B.reorder||drag)return;const li=g.closest('li.ro');if(!li)return;
+  savePins(scope,pk);renderLib();note(i>=0?'고정을 풀었어요.':'모든 사람 목록 맨 위에 고정했어요.');const b=$('#sets').querySelector(`li[data-k="${k}"] button[data-pin]`);if(b)b.focus()}
+function moveItem(k,d){const li=$('#sets').querySelector(`li[data-k="${k}"]`);if(!li)return;const g=li.dataset.g,keys=domKeys(g),i=keys.indexOf(k),j=i+d;if(i<0||j<0||j>=keys.length)return;[keys[i],keys[j]]=[keys[j],keys[i]];
+  saveGroup(g,keys);renderLib();const b=$('#sets').querySelector(`li[data-k="${k}"] .grip`);if(b)b.focus()}
+// ≡: hold it (about a third of a second) and drag; with a mouse, drag right away. Moving before the hold ends cancels.
+// The list scrolls when you hold near the top or bottom edge.
+let drag=null,hold=null;
+function startDrag(li,g,id,y){
+  hold=null;g.classList.remove('hold');try{navigator.vibrate&&navigator.vibrate(12)}catch(x){}
+  drag={li,g,grp:li.dataset.g,id,off:y-li.getBoundingClientRect().top,y,before:domKeys(li.dataset.g).join()};li.classList.add('drag');$('#sets').classList.add('dragging');
+  const loop=()=>{if(!drag)return;const y=drag.y,edge=70;if(y<edge)scrollBy(0,-Math.ceil((edge-y)/6));else if(y>innerHeight-edge)scrollBy(0,Math.ceil((y-innerHeight+edge)/6));dragTo(y);drag.raf=requestAnimationFrame(loop)};drag.raf=requestAnimationFrame(loop)}
+$('#sets').addEventListener('pointerdown',e=>{const g=e.target.closest('.grip');if(!g||drag||hold)return;const li=g.closest('li[data-k]');if(!li)return;
   e.preventDefault();try{g.setPointerCapture(e.pointerId)}catch(x){}
-  drag={li,g,grp:li.dataset.g,id:e.pointerId,off:e.clientY-li.getBoundingClientRect().top,y:e.clientY,before:domKeys(li.dataset.g).join()};li.classList.add('drag');$('#sets').classList.add('dragging');
-  const loop=()=>{if(!drag)return;const y=drag.y,edge=70;if(y<edge)scrollBy(0,-Math.ceil((edge-y)/6));else if(y>innerHeight-edge)scrollBy(0,Math.ceil((y-innerHeight+edge)/6));dragTo(y);drag.raf=requestAnimationFrame(loop)};drag.raf=requestAnimationFrame(loop)});
+  if(e.pointerType==='mouse'){startDrag(li,g,e.pointerId,e.clientY);return}
+  g.classList.add('hold');hold={id:e.pointerId,y:e.clientY,g,t:setTimeout(()=>{if(hold&&hold.g===g)startDrag(li,g,hold.id,hold.y)},320)}});
 function dragTo(y){const li=drag.li;let n;
-  const same=n=>n&&n.classList.contains('ro')&&n.dataset.g===drag.grp; // stay within pinned / own group
+  const same=n=>n&&n.dataset&&n.dataset.k&&n.dataset.g===drag.grp; // stay within pinned / own group
   while(same(n=li.nextElementSibling)&&y>n.getBoundingClientRect().top+n.offsetHeight/2)n.after(li);
   while(same(n=li.previousElementSibling)&&y<n.getBoundingClientRect().top+n.offsetHeight/2)n.before(li);
   li.style.transform='';const nat=li.getBoundingClientRect().top;li.style.transform=`translateY(${y-drag.off-nat}px)`}
-$('#sets').addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;e.preventDefault();drag.y=e.clientY;dragTo(e.clientY)});
-function dragEnd(e){if(!drag||(e&&e.pointerId!==drag.id))return;cancelAnimationFrame(drag.raf);const {li,before,grp}=drag;drag=null;
+$('#sets').addEventListener('pointermove',e=>{
+  if(hold&&e.pointerId===hold.id){if(Math.abs(e.clientY-hold.y)>10){clearTimeout(hold.t);hold.g.classList.remove('hold');hold=null}else hold.y=e.clientY;return}
+  if(!drag||e.pointerId!==drag.id)return;e.preventDefault();drag.y=e.clientY;dragTo(e.clientY)});
+function dragEnd(e){
+  if(hold&&(!e||e.pointerId===hold.id)){clearTimeout(hold.t);hold.g.classList.remove('hold');hold=null}
+  if(!drag||(e&&e.pointerId!==drag.id))return;cancelAnimationFrame(drag.raf);const {li,before,grp}=drag;drag=null;
   li.classList.remove('drag');li.style.transform='';$('#sets').classList.remove('dragging');
   const keys=domKeys(grp);if(keys.join()!==before)saveGroup(grp,keys);renderLib()}
 $('#sets').addEventListener('pointerup',dragEnd);$('#sets').addEventListener('pointercancel',dragEnd);
+$('#sets').addEventListener('contextmenu',e=>{if(e.target.closest('.grip'))e.preventDefault()});
+$('#sets').addEventListener('keydown',e=>{const g=e.target.closest('.grip');if(!g)return;if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();moveItem(g.closest('li').dataset.k,e.key==='ArrowUp'?-1:1)}});
 $('#langBar').addEventListener('click',e=>{const b=e.target.closest('.sc');if(!b)return;pref.set('langf',b.dataset.l||'');renderLib()});
-$('#sets').addEventListener('click',e=>{const mv=e.target.closest('button[data-mv]');if(mv){moveItem(mv.closest('li').dataset.k,+mv.dataset.mv);return}
+$('#sets').addEventListener('click',e=>{if(e.target.closest('.grip'))return;
   const pb=e.target.closest('button[data-pin]');if(pb){togglePin(pb.closest('li').dataset.k);return}
-  if(B.reorder)return;const ab=e.target.closest('button[data-act]');if(ab){if(ab.dataset.act==='login')showAuth();return}
+  const ab=e.target.closest('button[data-act]');if(ab){if(ab.dataset.act==='login')showAuth();return}
   const fg=e.target.closest('.gear[data-fcfg]');if(fg){openFolderForm(fOf(fg.dataset.fcfg));return}
   const g=e.target.closest('.gear[data-cfg]');if(g){const s=B.lib.find(x=>x.id===g.dataset.cfg);if(s)openEdit(s);return}
   const fb=e.target.closest('.set[data-fid]');if(fb){B.folder=fb.dataset.fid;renderLib();scrollTo(0,0);return}const b=e.target.closest('.set');if(!b)return;const s=B.lib.find(x=>x.id===b.dataset.id);if(s)openSet(s)});
-function goLib(){stop();if($('#lib').classList.contains('hidden'))B.reorder=false;S.set=null;S.cur=-1;show('#practice',false);show('#setup',false);show('#fldForm',false);show('#spaces',false);show('#bk',false);show('#trash',false);show('#me',false);show('#auth',false);show('#lib',true);show('#bar',false);
+function goLib(){stop();S.set=null;S.cur=-1;show('#practice',false);show('#setup',false);show('#fldForm',false);show('#spaces',false);show('#bk',false);show('#trash',false);show('#me',false);show('#auth',false);show('#lib',true);show('#bar',false);
   S.pk=null;$('#wave').style.height='';show('#wEmpty',true);$('#wEmpty').textContent='';cv.classList.add('hidden');renderLib()}
 
 /* ---------- open a set ---------- */
