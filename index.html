@@ -713,7 +713,11 @@ const VIEWS=new Set(['#lib','#practice','#setup','#fldForm','#spaces','#trash','
 const show=(id,on)=>{$(id).classList.toggle('hidden',!on);if(on&&VIEWS.has(id))setMainTab(B.kind)};
 const pressed=id=>$(id).getAttribute('aria-pressed')==='true';
 function msg(t){$('#msg').textContent=t||''}
-function note(t){$('#note').textContent=t||'';show('#note',!!t)}
+// action notices close by themselves: Material Design's snackbar guidance is 4–10 s, so 4 s for short messages,
+// a little longer for long ones (about 60 ms per character, at most 8 s). Tapping still closes it at once.
+let noteT=0;
+function note(t){clearTimeout(noteT);$('#note').textContent=t||'';show('#note',!!t);
+  if(t)noteT=setTimeout(()=>show('#note',false),Math.max(4000,Math.min(8000,2500+String(t).length*60)))}
 function setPP(){$('#ppI').innerHTML=S.playing?PAUSE:PLAY;$('#pp').setAttribute('aria-label',S.playing?'멈춤':'재생')}
 const pref={get(k,d){try{const v=localStorage.getItem('naskah.'+k);return v==null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem('naskah.'+k,v)}catch(e){}}};
 const LANGS=[['id','인도네시아어','id-ID'],['ms','말레이어','ms-MY'],['en','영어','en-US'],['ja','일본어','ja-JP'],['zh','중국어','zh-CN'],['vi','베트남어','vi-VN'],['th','태국어','th-TH'],['tl','필리핀어','fil-PH'],['es','스페인어','es-ES'],['fr','프랑스어','fr-FR'],['de','독일어','de-DE'],['it','이탈리아어','it-IT'],['pt','포르투갈어','pt-BR'],['ru','러시아어','ru-RU'],['ar','아랍어','ar-SA'],['hi','힌디어','hi-IN'],['tr','튀르키예어','tr-TR'],['ko','한국어','ko-KR']];
