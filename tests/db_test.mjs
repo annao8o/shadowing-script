@@ -252,6 +252,21 @@ await db.exec("reset role; update settings set deepl_key = 'quota-key:fx' where 
 check((await tr(ja.token, '안녕')).error === 'deepl_quota', 'DeepL monthly limit is reported');
 await db.exec("reset role; update settings set deepl_key = null where id = 1; set role anon");
 
+console.log('대본 / 회화 (kind)');
+const kindOf = async (id, tok = ja.token) => (await one('select list_sets($1)', [tok])).find((r) => r.id === id).kind;
+check(await kindOf(ed) === 'script', 'sets start as 대본 (script)');
+check((await one('select set_kind($1,$2,$3,$4)', [bu.token, null, ed, 'talk'])).error === 'forbidden', "others cannot move someone's set");
+check((await one('select set_kind($1,$2,$3,$4)', [ja.token, null, ed, 'nope'])).error === 'bad_kind', 'only script or talk');
+check((await one('select set_kind($1,$2,$3,$4)', [ja.token, null, ed, 'talk'])).ok && await kindOf(ed) === 'talk', 'owner moves a set to 회화');
+check((await one('select set_kind($1,$2,$3,$4)', [bu.token, ADMIN, ed, 'script'])).ok && await kindOf(ed) === 'script', 'admin can move it back');
+const kf = (await newFolder(ja.token, '회화 폴더', 'private')).id;
+await one('select update_set($1,$2,$3::jsonb)', [ed, ja.token, JSON.stringify({ folder_id: kf })]);
+check((await one('select set_folder_kind($1,$2,$3)', [bu.token, kf, 'talk'])).error === 'forbidden', "others cannot move someone's folder");
+check((await one('select set_folder_kind($1,$2,$3)', [ja.token, kf, 'talk'])).ok && (await one('select list_folders($1)', [ja.token])).find((f) => f.id === kf).kind === 'talk' && await kindOf(ed) === 'talk', 'moving a folder moves the sets inside it');
+await one('select update_set($1,$2,$3::jsonb)', [ed, ja.token, JSON.stringify({ folder_id: null })]);
+check((await one('select save_order($1,$2,$3)', [ja.token, 'talk:' + S1, [sk1]])).ok && (await one('select save_pins($1,$2,$3,$4)', [ja.token, ADMIN, 'talk:' + S1, [sk1]])).ok, '회화 top list has its own order and pins');
+await one('select save_pins($1,$2,$3,$4)', [ja.token, ADMIN, 'talk:' + S1, []]);
+
 console.log('looking around without logging in');
 const gIds = async (tok = null) => (await one('select list_sets($1)', [tok])).map((r) => r.title);
 const gFolders = async () => (await one('select list_folders($1)', [null])).map((f) => f.title);

@@ -267,18 +267,6 @@ body.pred .pre{display:block}
 <main class="wrap">
   <p class="note hidden" id="note"></p>
   <p class="note onote hidden" id="offNote" role="status">인터넷에 연결되지 않았어요. 이 기기에 오프라인 저장한 스크립트만 보여요.</p>
-  <section class="hidden" id="talk">
-    <div class="sum"><h2>회화</h2></div>
-    <p class="hint" style="margin-top:4px">한국어로 적거나 말하면 바로 바꿔서, 한글 발음과 함께 소리 내어 읽어 줘요.</p>
-    <div class="askbox" id="askBox" role="region" aria-label="한국어로 물어보기">
-      <label class="f" for="askIn" style="margin-top:0">한국어로 적거나 말해 보세요</label>
-      <textarea id="askIn" class="inp" maxlength="300" placeholder="예: 화장실이 어디예요?" autocomplete="off"></textarea>
-      <div class="row"><select id="askLang" class="inp" aria-label="바꿀 언어"></select><button class="btn main" id="askGo">바꾸기</button><button class="btn hidden" id="askMic" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg><span id="askMicT">말하기</span></button></div>
-      <div id="askMsg" class="bkmsg" role="status"></div>
-      <ul class="askres" id="askRes" aria-live="polite"></ul>
-    </div>
-    <p class="hint offmsg">인터넷에 연결되면 쓸 수 있어요.</p>
-  </section>
   <section class="setup hidden" id="auth">
     <button class="back" id="authBack" type="button" style="margin-top:0">← 로그인 없이 둘러보기</button>
     <p class="hint" id="authWhy" style="margin:4px 0 12px"></p>
@@ -298,6 +286,14 @@ body.pred .pre{display:block}
   <section id="lib">
     <p class="note gnote hidden" id="guestNote" role="button" tabindex="0">로그인하면 이 공간의 멤버가 되어 스크립트를 올리고 공유받을 수 있어요.</p>
     <div class="sum hi"><button class="back hidden" id="fBack">← 전체 목록</button><span id="hello"></span><button class="meic hidden" id="meIcon" aria-label="내 정보" title="내 정보"><svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm0 14a8 8 0 0 1-6.14-2.88 9.95 9.95 0 0 1 12.28 0A8 8 0 0 1 12 20z"/></svg></button></div>
+    <div class="askbox hidden" id="askBox" role="region" aria-label="한국어로 물어보기">
+      <label class="f" for="askIn" style="margin-top:0">한국어로 적거나 말해 보세요</label>
+      <textarea id="askIn" class="inp" maxlength="300" placeholder="예: 화장실이 어디예요?" autocomplete="off"></textarea>
+      <div class="row"><select id="askLang" class="inp" aria-label="바꿀 언어"></select><button class="btn main" id="askGo">바꾸기</button><button class="btn hidden" id="askMic" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg><span id="askMicT">말하기</span></button></div>
+      <div id="askMsg" class="bkmsg" role="status"></div>
+      <ul class="askres" id="askRes" aria-live="polite"></ul>
+    </div>
+    <p class="hint offmsg hidden" id="askOff">회화 번역은 인터넷에 연결되면 쓸 수 있어요.</p>
     <div class="row" style="margin-top:10px"><button class="btn main hidden" id="addBtn">+ 새 대본 추가</button><button class="btn hidden" id="newFld">+ 새 폴더</button><button class="btn hidden" id="inboxBtn">알림</button><button class="btn" id="bkBtn">백업</button><button class="btn" id="meBtn">내 정보</button><button class="btn hidden" id="trBtn">휴지통</button></div>
     <p class="hint hidden" id="guestHint"></p>
     <div class="inbox hidden" id="inbox" role="region" aria-label="공유 알림"></div>
@@ -365,6 +361,9 @@ body.pred .pre{display:block}
     <h2 id="fldH">새 폴더</h2>
     <label class="f" for="fldName">폴더 이름</label>
     <input id="fldName" class="inp" maxlength="80" placeholder="예: 여행 회화">
+    <label class="f" for="fldKind">분류</label>
+    <select id="fldKind" class="inp" style="border-radius:12px"><option value="script">대본 탭에 두기</option><option value="talk">회화 탭에 두기</option></select>
+    <p class="hint">폴더 안의 스크립트도 모두 이 탭으로 같이 옮겨져요.</p>
     <label class="f">공개 범위</label>
     <div id="fldVis"></div>
     <p class="hint">폴더 안의 스크립트는 모두 이 공개 범위를 따라요. 일부 공개는 받는 사람이 한 번 수락하면, 나중에 넣는 스크립트도 함께 보여요.</p>
@@ -379,6 +378,7 @@ body.pred .pre{display:block}
     <input id="title" class="inp" placeholder="예: 학회 발표 인사말" maxlength="80">
     <label class="f" for="lang">연습할 언어</label>
     <select id="lang" class="inp" style="border-radius:12px"></select>
+    <div id="kindWrap" class="hidden"><label class="f" for="kindSel">분류</label><select id="kindSel" class="inp" style="border-radius:12px"><option value="script">대본 탭에 두기</option><option value="talk">회화 탭에 두기</option></select><p class="hint hidden" id="kindHint"></p></div>
     <div id="fldSelWrap" class="hidden"><label class="f" for="fldSel">폴더</label><select id="fldSel" class="inp" style="border-radius:12px"></select><p class="hint hidden" id="fldSelHint"></p></div>
     <div id="fVisWrap"><label class="f">공유 범위</label><p class="hint hidden" id="fVisOther" style="margin-top:0"></p><div id="fVis"></div></div>
     <label class="f" for="script">1. 대본 (한 줄에 한 멘트)</label>
@@ -639,11 +639,11 @@ const au=$('#au'),cv=$('#cv'),list=$('#list');
 const S={set:null,items:[],notes:[],segs:[],spk:[],pr:[],filter:null,pk:null,hop:0.01,dur:0,cur:-1,playing:false,left:0,stopAt:0,timer:0,temp:false,resting:false,tts:false,tok:0,t0:0,newSpk:-1};
 let ROUTE0=location.hash;
 function setRoute(r){const h=r?'#'+r:'';if(location.hash===h)return;try{history.replaceState(null,'',h||location.pathname+location.search)}catch(e){}}
-const B={spaces:[],space:null,rawSets:[],rawFolders:[],folders:[],folder:null,inbox:[],remote:false,session:'',me:null,login:'',name:'',admin:false,adminKey:'',canAdd:false,needCode:false,all:[],lib:[]};
+const B={kind:'script',spaces:[],space:null,rawSets:[],rawFolders:[],folders:[],folder:null,inbox:[],remote:false,session:'',me:null,login:'',name:'',admin:false,adminKey:'',canAdd:false,needCode:false,all:[],lib:[]};
 function setAll(arr){B.all=sortLib(arr);B.lib=B.all.filter(s=>!s.deletedAt)}
 const SY=window.speechSynthesis;let voices=[],raf=0,stopT=0;
 const VIEWS=new Set(['#lib','#practice','#setup','#fldForm','#spaces','#bk','#trash','#me','#auth']);
-const show=(id,on)=>{$(id).classList.toggle('hidden',!on);if(on&&VIEWS.has(id)){const t=$('#talk');if(t&&!t.classList.contains('hidden')){t.classList.add('hidden');micStop()}setMainTab('lib')}};
+const show=(id,on)=>{$(id).classList.toggle('hidden',!on);if(on&&VIEWS.has(id))setMainTab(B.kind)};
 const pressed=id=>$(id).getAttribute('aria-pressed')==='true';
 function msg(t){$('#msg').textContent=t||''}
 function note(t){$('#note').textContent=t||'';show('#note',!!t)}
@@ -657,6 +657,7 @@ const AUTO_PR=['id','ms'];
 const fOf=id=>id&&B.folders.find(f=>f.id===id)||null;
 const myFolder=f=>!!f&&B.remote&&!!B.me&&f.owner_id===B.me;
 const inFolder=s=>s.folder&&fOf(s.folder)?s.folder:null;
+const kindOf=s=>{const f=s&&s.folder&&fOf(s.folder);return f?(f.kind==='talk'?'talk':'script'):(s&&s.kind==='talk'?'talk':'script')};
 const visTxt=(v,n)=>v==='private'?'비공개':v==='partial'?`일부 공개 ${n||0}명`:'전체 공개';
 const canModify=set=>!B.offline&&!!set&&(B.admin||(!!B.me&&set.uid===B.me));
 const whoOf=s=>!B.remote?'':s.uid&&s.uid===B.me?'<span class="mine">내 세트</span>'+(inFolder(s)?'':s.visibility==='private'?' · 비공개':s.visibility==='partial'?` · 일부 공개 ${s.shareCount||0}명`:'')+' · ':(s.sharedWithMe?'공유받음 · ':'')+(s.author?esc(s.author)+' · ':'');
@@ -671,7 +672,7 @@ const sortLib=a=>a.sort((x,y)=>(y.updatedAt||0)-(x.updatedAt||0));
 // Items missing from a saved order (new ones) go on top; with no saved order: folders first, then latest edited.
 const ordKey=()=>B.remote&&B.session&&B.me?'orders.u.'+B.me:'orders';
 function orders(){const k=ordKey();if(B.ordK!==k){B.ordK=k;try{const o=JSON.parse(pref.get(k,'{}'));B.orders=o&&typeof o==='object'&&!Array.isArray(o)?o:{}}catch(e){B.orders={}}}return B.orders}
-const listScope=F=>F?'folder:'+F.id:'top:'+(B.space||'local');
+const listScope=F=>F?'folder:'+F.id:(B.kind==='talk'?'talk:':'top:')+(B.space||'local');
 function ordered(scope,items){const o=orders()[scope];if(!Array.isArray(o)||!o.length)return items;const pos=new Map(o.map((k,i)=>[k,i]));
   return items.filter(x=>!pos.has(x.k)).concat(items.filter(x=>pos.has(x.k)).sort((a,b)=>pos.get(a.k)-pos.get(b.k)))}
 // admin pins: B.pins[scope] = keys shown on top for everyone, in the admin's order (list_pins/save_pins)
@@ -716,7 +717,7 @@ async function sha(t){return hex(await crypto.subtle.digest('SHA-256',new TextEn
 const adminArg=()=>B.admin&&B.adminKey?B.adminKey:null;
 const canVisOf=set=>B.remote&&!!B.session&&!!set&&(set.uid===B.me||B.admin);
 const isAuthErr=e=>!!e&&/\bauth\b/.test(String(e.message||''));
-function rowToSet(r){return{id:r.id,uid:r.owner_id||null,title:r.title,script:r.script,mode:r.mode,fmt:r.fmt,tts:r.tts,segs:r.segs,spk:r.spk,pr:r.pr,dur:r.dur,name:r.name,
+function rowToSet(r){return{id:r.id,kind:r.kind==='talk'?'talk':'script',uid:r.owner_id||null,title:r.title,script:r.script,mode:r.mode,fmt:r.fmt,tts:r.tts,segs:r.segs,spk:r.spk,pr:r.pr,dur:r.dur,name:r.name,
   audio:r.audio_path?{path:r.audio_path,mime:r.audio_mime}:null,folder:r.folder_id||null,author:r.author_name||r.author||'',lang:r.lang||'id',visibility:r.visibility||'public',sharedWithMe:!!r.shared_with_me,shareCount:r.share_count,createdAt:Date.parse(r.created_at),updatedAt:Date.parse(r.updated_at),deletedAt:r.deleted_at?Date.parse(r.deleted_at):null}}
 async function load(){
   if(!B.remote){await reloadLocal();return}
@@ -784,6 +785,7 @@ async function addSet(data,blob){
   if(blob){msg('음성 파일을 올리는 중…');const a=await uploadAudio(blob);p.audio_path=a.path;p.audio_mime=a.mime}
   const {data:id,error}=await sb.rpc('create_set',{p,p_token:B.session});
   if(error){const t=String(error.message||'');if(isAuthErr(error)){logout(true);throw{code:'auth'}}throw{code:/full/.test(t)?'quota_exceeded':/too_big|bad_script/.test(t)?'too_big':'save'}}
+  if(data.kind==='talk'){try{await sb.rpc('set_kind',{p_token:B.session,p_admin:null,p_id:id,p_kind:'talk'})}catch(e){}}
   await load();
   return B.all.find(x=>x.id===id)||Object.assign({},data,{id,uid:B.me,audio:p.audio_path?{path:p.audio_path,mime:p.audio_mime}:null});
 }
@@ -932,10 +934,9 @@ async function askGo(){
 }
 // 대본 / 회화 tabs. Opening any other view (show(view,true)) closes 회화.
 function setMainTab(t){const a=$('#tabLib'),b=$('#tabTalk');if(!a)return;const on=t==='talk'?b:a,off=t==='talk'?a:b;on.setAttribute('aria-current','page');off.removeAttribute('aria-current')}
-function openTalk(){stop();micStop();for(const id of ['#lib','#practice','#setup','#fldForm','#spaces','#bk','#trash','#me','#auth','#bar'])$(id).classList.add('hidden');
-  S.set=null;S.cur=-1;$('#talk').classList.remove('hidden');setMainTab('talk');setRoute('talk');$('#askMsg').textContent='';renderAsk(false);scrollTo(0,0)}
-$('#tabTalk').onclick=()=>{openTalk();$('#askIn').focus({preventScroll:true})};
-$('#tabLib').onclick=()=>{goLib();scrollTo(0,0)};
+function goTab(k){if(k!=='talk')micStop();B.kind=k;B.folder=null;B.reorder=false;EDIT=null;FED=null;goLib();scrollTo(0,0)}
+$('#tabTalk').onclick=()=>goTab('talk');
+$('#tabLib').onclick=()=>goTab('script');
 $('#askGo').onclick=askGo;
 // speak Korean instead of typing (browser speech recognition: Chrome/Android/Edge and Safari on iPhone)
 const SRec=()=>window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -979,7 +980,12 @@ function renderLib(){
   if(!$('#trash').classList.contains('hidden'))renderTrash();
   if(B.folder&&!fOf(B.folder))B.folder=null;
   const F=fOf(B.folder);
-  if(!$('#lib').classList.contains('hidden'))setRoute(F?'folder='+F.id:'');
+  if(F)B.kind=F.kind==='talk'?'talk':'script';
+  if(!B.remote)B.kind='script';
+  const talk=B.kind==='talk';setMainTab(B.kind);
+  if(!$('#lib').classList.contains('hidden'))setRoute(F?'folder='+F.id:talk?'talk':'');
+  show('#askBox',B.remote&&talk&&!F);show('#askOff',talk&&!F);if(talk&&!F&&!$('#askRes').children.length)renderAsk(false);
+  $('#addBtn').textContent=talk?'+ 새 회화 추가':'+ 새 대본 추가';
   show('#newFld',canAddHere&&B.remote&&!F);show('#fHead',!!F);show('#fBack',!!F);
   if(F){$('#fTitleH').textContent=F.title;$('#fInfo').textContent=folderInfo(F);show('#fLeaveRow',!!F.shared_with_me&&!myFolder(F));
     const fo=!!OFF.folders[F.id];show('#fOffRow',B.remote&&(fo||!B.offline));$('#fOffBtn').textContent=fo?'오프라인 저장 해제':'폴더째 오프라인 저장';
@@ -987,11 +993,11 @@ function renderLib(){
   const el=$('#sets');
   if(noSpace){show('#langBar',false);show('#ordBtn',false);show('#ordHint',false);
     el.innerHTML=`<li class="empty-l">아직 공간이 없어요. ${B.admin?'위쪽 공간 버튼에서 ‘+ 새 공간’으로 만들어 주세요.':'관리자가 공간을 만들면 여기에 나와요.'}</li>`;return}
-  const pool=F?B.lib.filter(s=>s.folder===F.id):B.lib.filter(s=>!inFolder(s));
-  const folders=F?[]:B.folders;
+  const pool=F?B.lib.filter(s=>s.folder===F.id):B.lib.filter(s=>!inFolder(s)&&kindOf(s)===B.kind);
+  const folders=F?[]:B.folders.filter(f=>(f.kind==='talk'?'talk':'script')===B.kind);
   if(!pool.length&&!folders.length){show('#langBar',false);show('#ordBtn',false);show('#ordHint',false);B.reorder=false;
-    el.innerHTML=`<li class="empty-l">${F?(myFolder(F)?'아직 이 폴더에 스크립트가 없어요. ‘새 대본 추가’로 바로 넣거나, 스크립트의 톱니바퀴에서 폴더를 골라 옮겨 보세요.':'아직 이 폴더에 스크립트가 없어요.'):B.canAdd?'아직 대본이 없어요. ‘새 대본 추가’로 첫 세트를 만들어 보세요.':'아직 등록된 대본이 없어요. 추가 권한이 있는 사람이 올리면 여기에 나타나요.'}</li>`;return}
-  const counted=F?pool:B.lib;
+    el.innerHTML=`<li class="empty-l">${F?(myFolder(F)?'아직 이 폴더에 스크립트가 없어요. ‘새 대본 추가’로 바로 넣거나, 스크립트의 톱니바퀴에서 폴더를 골라 옮겨 보세요.':'아직 이 폴더에 스크립트가 없어요.'):talk?(B.canAdd?'아직 회화 스크립트가 없어요. ‘+ 새 회화 추가’로 만들거나, 대본 탭에서 스크립트·폴더의 톱니바퀴를 눌러 분류를 ‘회화’로 바꾸면 이쪽으로 옮겨져요.':'아직 회화 스크립트가 없어요. 위의 칸에서 한국어로 물어볼 수 있어요.'):B.canAdd?'아직 대본이 없어요. ‘새 대본 추가’로 첫 세트를 만들어 보세요.':'아직 등록된 대본이 없어요. 추가 권한이 있는 사람이 올리면 여기에 나타나요.'}</li>`;return}
+  const counted=F?pool:B.lib.filter(s=>kindOf(s)===B.kind);
   const langs={};for(const s of counted){const k=s.lang||'id';langs[k]=(langs[k]||0)+1}
   const codes=Object.keys(langs);let lf=pref.get('langf','');if(lf&&!langs[lf])lf='';
   show('#langBar',codes.length>1);
@@ -1061,7 +1067,7 @@ async function decode(blob){
 function setAudio(blob){try{if(au.src&&au.src.startsWith('blob:'))URL.revokeObjectURL(au.src)}catch(e){}if(blob){au.src=URL.createObjectURL(blob);au.load()}else au.removeAttribute('src')}
 let openTok=0;
 async function openSet(set){
-  const my=++openTok;stop();S.paused=null;
+  const my=++openTok;stop();S.paused=null;B.kind=kindOf(set);
   S.set=set;S.lang=set.lang||'id';S.tts=!!set.tts;S.items=parseScript(set.script,set.mode||'auto',set.fmt===2?'pk':'kp');S.notes=S.items.notes||[];S.cur=-1;S.pk=null;S.dur=set.dur||0;S.filter=null;S.newSpk=-1;
   S.segs=(set.segs&&set.segs.length===S.items.length)?set.segs.map(g=>g.m?{s:+g.s,e:+g.e,m:1}:{s:+g.s,e:+g.e}):S.items.map(()=>({s:0,e:0}));
   S.spk=(set.spk&&set.spk.length===S.items.length)?set.spk.map(spkList):S.items.map(i=>spkList(i.sp));
@@ -1124,8 +1130,11 @@ function fillFolderSel(owner,cur){
   $('#fldSel').innerHTML='<option value="">폴더 없음</option>'+mine.map(f=>`<option value="${esc(f.id)}">${esc(f.title)}</option>`).join('');
   $('#fldSel').value=cur&&mine.some(f=>f.id===cur)?cur:'';syncFolderSel();
 }
-function syncFolderSel(){const fc=folderChoice(),fid=fc!==undefined?fc:EDIT&&EDIT.folder,f=fOf(fid),canVis=EDIT?canVisOf(EDIT):B.remote;
+function syncFolderSel(){const fc=folderChoice(),fid=fc!==undefined?fc:EDIT&&EDIT.folder,f=fOf(fid);syncKind(f);const canVis=EDIT?canVisOf(EDIT):B.remote;
   show('#fVisWrap',canVis&&!fid);show('#fldSelHint',!!f);if(f)$('#fldSelHint').textContent=`이 폴더의 공개 범위(${visTxt(f.visibility,f.share_count)})를 따라요.`}
+function syncKind(f){show('#kindWrap',B.remote&&(!EDIT||canModify(EDIT)));$('#kindSel').disabled=!!f;show('#kindHint',!!f);
+  if(f){$('#kindSel').value=f.kind==='talk'?'talk':'script';$('#kindHint').textContent='폴더의 분류를 따라요. 폴더를 ‘폴더 없음’으로 바꾸면 고를 수 있어요.'}}
+const formKind=()=>{const fc=folderChoice(),f=fOf(fc!==undefined?fc:EDIT&&EDIT.folder);return f?(f.kind==='talk'?'talk':'script'):($('#kindSel').value==='talk'?'talk':'script')};
 const folderChoice=()=>$('#fldSelWrap').classList.contains('hidden')?undefined:($('#fldSel').value||null);
 function clearForm(){$('#title').value='';$('#script').value='';$('#mode').value='auto';pickBlob=null;$('#fname').textContent='선택된 파일 없음';$('#audIn').value='';$('#toTts').checked=false}
 function formMode(edit){
@@ -1135,12 +1144,12 @@ function formMode(edit){
   if(edit)$('#audNow').textContent=EDIT.tts?'지금은 기계 음성 세트예요. 녹음 파일을 고르면 녹음으로 바뀌어요.':'지금 녹음: '+(EDIT.name||'음성 파일')+' ('+fmt(EDIT.dur)+'). 새 파일을 고르면 바뀌고, 멘트 구간은 새로 나눠요.';
 }
 function openForm(){stop();if(wasEdit){clearForm();wasEdit=false}EDIT=null;formMode(false);show('#fVisOther',false);
-  $('#lang').value=pref.get('lastLang','id');if(!$('#lang').value)$('#lang').value='id';show('#fVisWrap',B.remote);if(B.remote)fPick.set(pref.get('lastVis','public'),[]);fillFolderSel(B.me,B.folder);show('#lib',false);show('#practice',false);show('#bar',false);show('#setup',true);msg('');
+  $('#lang').value=pref.get('lastLang','id');if(!$('#lang').value)$('#lang').value='id';show('#fVisWrap',B.remote);if(B.remote)fPick.set(pref.get('lastVis','public'),[]);$('#kindSel').value=B.kind;fillFolderSel(B.me,B.folder);show('#lib',false);show('#practice',false);show('#bar',false);show('#setup',true);msg('');
   $('#title').focus()}
 async function openEdit(set){
   if(!canModify(set))return;stop();EDIT=set;wasEdit=true;clearForm();formMode(true);
   $('#title').value=set.title||'';$('#script').value=set.script||'';$('#mode').value=set.mode||'auto';$('#lang').value=set.lang||'id';
-  const own=canVisOf(set);show('#fVisWrap',own);fillFolderSel(set.uid,set.folder);
+  const own=canVisOf(set);show('#fVisWrap',own);$('#kindSel').value=kindOf(set);fillFolderSel(set.uid,set.folder);
   const other=own&&set.uid!==B.me;show('#fVisOther',other);if(other)$('#fVisOther').textContent=`${set.author?'‘'+set.author+'’ 님이':'다른 사람이'} 올린 세트예요. 관리자라서 공개 범위를 바꿀 수 있어요.`;
   show('#lib',false);show('#practice',false);show('#bar',false);show('#setup',true);msg('');scrollTo(0,0);
   if(own){fPick.set(set.visibility,[]);if(set.visibility==='partial'){msg('공유 대상을 불러오는 중…');
@@ -1156,7 +1165,7 @@ async function saveForm(tts){
   if(tts&&!SY){msg('이 브라우저는 기계 음성을 지원하지 않아요.');return}
   $('#go').disabled=$('#ttsGo').disabled=true;
   try{
-    const data={fmt:2,title:title(),script:$('#script').value,mode:$('#mode').value,tts:!!tts,spk:items.map(i=>i.sp||''),lang:$('#lang').value||'id'};
+    const data={fmt:2,title:title(),script:$('#script').value,mode:$('#mode').value,tts:!!tts,spk:items.map(i=>i.sp||''),lang:$('#lang').value||'id',kind:formKind()};
     if(B.remote)data.space_id=B.space;
     pref.set('lastLang',data.lang);
     const fid=folderChoice();
@@ -1188,7 +1197,8 @@ async function saveEdit(){
   if(v&&v.vis==='partial'&&!v.users.length){msg('일부 공개는 공유할 사람을 한 명 이상 추가해 주세요.');return}
   const script=$('#script').value,mode=$('#mode').value,changed=script!==set.script||mode!==(set.mode||'auto');
   const old=parseScript(set.script,set.mode||'auto',ordOf(set)),sameLines=items.length===old.length&&items.every((it,i)=>it.t===old[i].t);
-  const d={title:title(),lang:$('#lang').value||'id'};
+  const newKind=formKind(),moved=newKind!==kindOf(set)||newKind!==(set.kind||'script');
+  const d={title:title(),lang:$('#lang').value||'id'};if(!B.remote&&moved)d.kind=newKind;
   if(B.remote&&fid!==undefined&&fid!==(set.folder||null))d.folder_id=fid;
   if(changed){
     // keep speakers and hand-fixed pronunciations for lines whose text didn't change
@@ -1216,13 +1226,14 @@ async function saveEdit(){
       else if(pickBlob){msg('음성 파일을 올리는 중…');const a=await uploadAudio(pickBlob);Object.assign(p,{audio_path:a.path,audio_mime:a.mime})}
       const {error}=await sb.rpc('update_set',{p_id:set.id,p_token:B.session,p,p_admin:adminArg()});
       if(error){const t=String(error.message||'');if(isAuthErr(error)){logout(true);throw{code:'auth'}}throw{code:/too_big|bad_script/.test(t)?'too_big':/forbidden|bad_folder/.test(t)?'forbidden':'save'}}
+      if(moved){const {data:kd}=await sb.rpc('set_kind',{p_token:B.session,p_admin:adminArg(),p_id:set.id,p_kind:newKind});if(!kd||kd.error)note('분류는 바꾸지 못했어요. 다시 시도해 주세요.')}
       if(v){const {data,error:e2}=await sb.rpc('share_set',{p_token:B.session,p_id:set.id,p_visibility:v.vis,p_users:v.vis==='partial'?v.users.map(x=>x.id):null,p_admin:adminArg()});
         if(e2||!data||data.error)note('공유 범위는 저장하지 못했어요. 세트 설정에서 다시 시도해 주세요.')}
       while(loading)await new Promise(r=>setTimeout(r,100));
       await load();
     }
     const n=B.all.find(x=>x.id===set.id);
-    EDIT=null;clearForm();msg('');goLib();note('‘'+((n||set).title||'제목 없음')+'’ 세트 설정을 저장했어요.');
+    EDIT=null;clearForm();msg('');goLib();note('‘'+((n||set).title||'제목 없음')+'’ '+(n&&kindOf(n)!==B.kind?`스크립트를 ${kindOf(n)==='talk'?'회화':'대본'} 탭으로 옮겼어요.`:'세트 설정을 저장했어요.'));
   }catch(e){
     const c=e&&e.code;
     msg(c==='decode'?'음성 파일을 읽지 못했어요. mp3나 m4a로 다시 시도해 주세요.':c==='too_large'?'음성 파일이 너무 커요. 약 15MB 이하의 mp3·m4a로 줄여 주세요.':c==='unsupported_type'?'이 형식의 음성 파일은 올릴 수 없어요. mp3나 m4a로 바꿔 주세요.':c==='auth'?'로그인이 만료됐어요. 다시 로그인한 뒤 저장해 주세요.':c==='too_big'?'대본이 너무 길어요. 나눠서 올려 주세요.':c==='forbidden'?'이 세트를 올린 사람이나 관리자만 고칠 수 있어요.':c==='upload'?'음성 파일을 올리지 못했어요. 연결을 확인하고 다시 시도해 주세요.':'저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.');
@@ -1566,7 +1577,7 @@ function fldMsg(t){$('#fldMsg').textContent=t||''}
 async function openFolderForm(f){
   if(!B.remote||!B.session||(f&&!myFolder(f)))return;stop();FED=f||null;
   $('#fldH').textContent=f?'폴더 설정':'새 폴더';$('#fldName').value=f?f.title:'';show('#fldDel',!!f);show('#fldAsk',false);
-  flPick.set(f?f.visibility:pref.get('lastVis','public'),[]);
+  flPick.set(f?f.visibility:pref.get('lastVis','public'),[]);$('#fldKind').value=f?(f.kind==='talk'?'talk':'script'):B.kind;
   show('#lib',false);show('#fldForm',true);fldMsg('');scrollTo(0,0);
   if(f&&f.visibility==='partial'){fldMsg('공유 대상을 불러오는 중…');let us=[];try{const {data}=await sb.rpc('get_folder_shares',{p_token:B.session,p_id:f.id});us=data||[]}catch(e){}
     if(FED===f){flPick.set(f.visibility,us);fldMsg('')}}
@@ -1582,7 +1593,10 @@ $('#fldSave').onclick=async()=>{const t=$('#fldName').value.trim();if(!t){fldMsg
   try{const isNew=!FED;
     const {data,error}=await sb.rpc('save_folder',{p_token:B.session,p_id:isNew?null:FED.id,p_title:t,p_visibility:v.vis,p_users:v.vis==='partial'?v.users.map(x=>x.id):null,p_space:B.space});
     if(error||!data||data.error){if(data&&data.error==='auth'){logout(true);return}fldMsg(data&&data.error==='full'?'폴더를 더 만들 수 없어요. 쓰지 않는 폴더를 지워 주세요.':'저장하지 못했어요. 다시 시도해 주세요.');return}
-    FED=null;await reloadLib();if(isNew)B.folder=data.id;goLib();
+    const fk=$('#fldKind').value==='talk'?'talk':'script',fMoved=isNew?fk!=='script':fk!==(FED.kind==='talk'?'talk':'script');
+    if(fMoved){const {data:kd}=await sb.rpc('set_folder_kind',{p_token:B.session,p_id:data.id,p_kind:fk});if(!kd||kd.error)note('분류는 바꾸지 못했어요. 다시 시도해 주세요.')}
+    FED=null;await reloadLib();if(isNew)B.folder=data.id;else if(fMoved)B.folder=null;goLib();
+    if(!isNew&&fMoved){note(`‘${t}’ 폴더를 ${fk==='talk'?'회화':'대본'} 탭으로 옮겼어요.`);return}
     note(isNew?`‘${t}’ 폴더를 만들었어요. ‘새 대본 추가’로 바로 넣거나, 스크립트의 톱니바퀴에서 이 폴더로 옮겨 보세요.`:`‘${t}’ 폴더 설정을 저장했어요.`)}
   finally{$('#fldSave').disabled=false}};
 $('#fldDel').onclick=()=>show('#fldAsk',true);
@@ -1736,7 +1750,7 @@ cv.classList.add('hidden');
 let libStarted=false;
 // reopen the page that was showing before a reload (#set=<id> or #folder=<id>)
 function restoreRoute(){
-  if(ROUTE0==='#talk'){ROUTE0='';if(B.remote&&!$('#lib').classList.contains('hidden'))openTalk();return}
+  if(ROUTE0==='#talk'){ROUTE0='';if(B.remote&&!$('#lib').classList.contains('hidden')){B.kind='talk';renderLib()}return}
   const m=/^#(set|folder)=([\w-]+)$/.exec(ROUTE0);ROUTE0='';
   if(!m||$('#lib').classList.contains('hidden'))return;
   const raw=m[1]==='folder'?B.rawFolders.find(x=>x.id===m[2]):B.rawSets.find(x=>x.id===m[2]);

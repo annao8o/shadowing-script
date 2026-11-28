@@ -109,9 +109,11 @@ The `<script>` block at the end has these parts, in order (search for the `/* --
 - Script lines starting with `#` are notes (`##` = bold section title, `#` = grey memo): `parseScript` keeps them out of
   the items (so `segs`/`spk`/`pr` indexes don't move) and returns them as `items.notes` (`{at, t, h}` = shown before
   line `at`; `h` = title). Editing only notes keeps `segs`.
-- Two top tabs: 대본 (library and everything else) and 회화 (`#talk`, the 한국어로 물어보기 box). `show(view, true)` for
-  any main view closes 회화; `openTalk()` opens it (route `#talk`). `setMainTab` marks the tab (the login form has its
-  own `setTab`).
+- Two top tabs, 대본 and 회화, both showing the library filtered by `kind` ('script' | 'talk', `B.kind`; route `#talk`).
+  `sets.kind` / `folders.kind` are changed with `set_kind` (owner or admin) and `set_folder_kind` (owner; also moves the
+  sets inside). A set in a folder follows the folder (`kindOf`). `create_set` has no kind, so `addSet` calls `set_kind`
+  after it. The 회화 tab shows the 한국어로 물어보기 box above its list; its top-level order/pins use scope
+  `talk:<space>`. `setMainTab` marks the tab (the login form has its own `setTab`).
 - Offline saves (`/* ---------- offline saves` in index.html): IndexedDB `naskah-off` holds `idx` (`OFF.sets[id]={row,own,via,size}`,
   `OFF.folders`, `OFF.spaces`) and `aud:<id>` recording blobs. Nothing is saved automatically on play. `offSync()` runs after
   every successful `load()` (refreshes rows/audio, adds sets newly put in a saved folder). When `load()` fails and something
